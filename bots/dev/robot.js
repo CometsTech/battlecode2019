@@ -20,13 +20,13 @@ class MyRobot extends BCAbstractRobot {
 				this.infoMap = this.karbonite_map;
 				for(var i = 0; i < this.map.length; i++){
 					for(var j = 0; j < this.map.length; j++){
-						if(this.fuel_map[i][j]){
-							infoMap[i][j] = true;
+						if(this.fuel_map[j][i]){
+							this.infoMap[j][i] = true;
 						}
 					}
 				}
 				//TODO: Find closest mining location
-				this.destination = [];
+				this.destination = find_closest_destination(this.infoMap, this.me.x, this.me.y);
 				break;
 			case SPECS.CRUSADER:
 				break;
@@ -73,6 +73,24 @@ class MyRobot extends BCAbstractRobot {
 		}
 	}
 
+}
+
+function find_closest_destination(map, x, y){
+	//TODO: Much more efficient than checking everything	
+	var min = map.length*map.length, bestx = 0, besty = 0;
+	for(var i = 0; i < map.length; i++){
+		for(var j = 0; j < map.length; j++){
+			if(map[j][i]){
+				var rsq = (x-i)*(x-i) + (y-j)*(y-j);
+				if(rsq < min){
+					bestx = i;
+					besty = j;
+					min = rsq;
+				}
+			}
+		}
+	}
+	return [bestx, besty]; //TODO: Better option if no destinations?
 }
 
 function find_open_adjacents(robot){
