@@ -37,6 +37,8 @@ class MyRobot extends BCAbstractRobot {
 			default:
 				this.log("HELP UNRECOGNIZED UNIT TYPE");
 		}
+	
+		this.inited = true;
 	}
 
 	turn(){
@@ -46,7 +48,7 @@ class MyRobot extends BCAbstractRobot {
 
 		switch(this.me.unit){
 			case SPECS.CASTLE: // 0
-				this.log("Castle health: " + this.me.health + " on turn " + step + " with time " +this.me.time);
+				this.log("Castle health: " + this.me.health + " on turn " + step + " with time " + this.me.time);
 				var availableDirections = find_open_adjacents(this);
 				for(var d of availableDirections){
 					if(can_buildUnit(this, SPECS.PILGRIM, d[0], d[1])){
@@ -61,6 +63,12 @@ class MyRobot extends BCAbstractRobot {
 					this.log("Mining");
 					return this.mine();
 				}
+				var destx = this.destination[0], desty = this.destination[1];
+				this.log(destx + " " + desty);
+				if(this.getVisibleRobotMap()[desty][destx] > 0){ //TODO add more checks, which team, unit type
+					this.infoMap[desty][destx] = 0;
+					this.destination = find_closest_destination(this.infoMap, this.me.x, this.me.y);
+				}
 				break;
 			case SPECS.CRUSADER: // 3
 				break;
@@ -73,6 +81,12 @@ class MyRobot extends BCAbstractRobot {
 		}
 	}
 
+}
+
+function generate_possible_moves(maxrsq){
+	/* returns a list of possible [dx, dy] up to maximum r^2 */
+	var possible = [];
+	return possible;
 }
 
 function find_closest_destination(map, x, y){
@@ -127,6 +141,7 @@ function can_move(robot, dx, dy){
 }
 
 function is_open(robot, x, y){
+	if(x < 0 || y < 0 || x >= robot.map.length || y >= robot.map.length) return false;
 	if(robot.map[y][x] && robot.getVisibleRobotMap()[y][x] <= 0) return true;
 	return false;
 }
