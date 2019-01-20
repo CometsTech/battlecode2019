@@ -1,4 +1,5 @@
 import {BCAbstractRobot, SPECS} from 'battlecode';
+import util from './util.js';
 
 var church = {};
 
