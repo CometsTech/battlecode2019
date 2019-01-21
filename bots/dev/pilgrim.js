@@ -36,7 +36,7 @@ pilgrim.init = (self) => {
 	for (let j = 0; j < self.map_s_y; j++){
 		for (let i = 0; i < self.map_s_x; i++){
 			if (self.karbonite_map[j][i]){
-				fuel_locs.push({x:i, y:j});
+				karb_locs.push({x:i, y:j});
 			}
 		}
 	}
