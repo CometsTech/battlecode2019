@@ -70,8 +70,44 @@ crusader.init = (self) => {
 	self.dir_weights = o_dir_cnts;
 };
 
+
 crusader.turn = (self) => {
-	
+	//First check for visible enemies
+	var visibleRobots = self.getVisibleRobots();
+	for(var robot of visibleRobots){
+		if(robot.team != self.me.team){
+			self.log("Crusader found enemy");
+			var dx = robot.x - self.me.x, dy = robot.y - self.me.y
+			if(util.can_attack(self, dx, dy)){
+				self.log("Crusader attacking");
+				return self.attack(dx, dy);
+			}
+			//try to move toward it
+		}
+	}
+
+	//If nothing then move according to plan
+	let dir_weights = self.dir_weights[self.me.y][self.me.x];
+	let rand = Math.random();
+	let tot = 0;
+	for (let i = 0; i < dir_weights.length; i++){
+		tot += dir_weights[i];
+	}
+	if (tot === 0){
+		// TODO: make knight return to start or something when reaches end
+		return;
+	}
+	rand *= tot;
+	let acc = 0;
+	let dir_i = 0;
+	for (let i = 0; i < dir_weights.length; i++){
+		acc += dir_weights[i];
+		if (acc > rand){
+			dir_i = i;
+			break;
+		}
+	}
+	return self.move(self.diff_list[dir_i].x, self.diff_list[dir_i].y);
 };
 
 export default crusader;

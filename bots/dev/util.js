@@ -2,6 +2,8 @@ import {BCAbstractRobot, SPECS} from 'battlecode';
 
 var util = {};
 
+const max_dist = 100000;
+
 const DIRECTIONS = [[0, 1], [1, 1], [1, 0], [1, -1], [0, -1], [-1, -1], [-1, 0], [-1, 1]];
 
 util.find_open_adjacents = (robot) => {
@@ -15,7 +17,7 @@ util.find_open_adjacents = (robot) => {
 
 util.can_attack = (robot, dx, dy) => {
 	var rsq = dx*dx + dy*dy;
-	if(SPECS.UNITS[robot.me.unit].ATTACK_FUEL_COST <= fuel && rsq >= SPECS.UNITS[robot.me.unit].ATTACK_RADIUS[0] && rsq <= SPECS.UNITS[robot.me.unit].ATTACK_RADIUS[1]) return true;
+	if(SPECS.UNITS[robot.me.unit].ATTACK_FUEL_COST <= robot.fuel && rsq >= SPECS.UNITS[robot.me.unit].ATTACK_RADIUS[0] && rsq <= SPECS.UNITS[robot.me.unit].ATTACK_RADIUS[1]) return true;
 	return false;
 };
 
@@ -26,8 +28,8 @@ util.can_buildUnit = (robot, unit, dx, dy) => {
 
 util.can_mine = (robot) => {
 	var x = robot.me.x, y = robot.me.y;
-	if(robot.karbonite_map[y][x] && robot.karbonite < SPECS.UNITS[robot.me.unit].KARBONITE_CAPACITY) return true;
-	if(robot.fuel_map[y][x] && robot.fuel < SPECS.UNITS[robot.me.unit].FUEL_CAPACITY) return true;
+	if(robot.karbonite_map[y][x] && robot.me.karbonite < SPECS.UNITS[robot.me.unit].KARBONITE_CAPACITY) return true;
+	if(robot.fuel_map[y][x] && robot.me.fuel < SPECS.UNITS[robot.me.unit].FUEL_CAPACITY) return true;
 	return false;
 };
 
@@ -42,6 +44,7 @@ util.is_open = (robot, x, y) => {
 	if(robot.map[y][x] && robot.getVisibleRobotMap()[y][x] <= 0) return true;
 	return false;
 };
+
 
 // from charles
 util.make_array_helper = (e, l_s, s, end) => {
@@ -83,7 +86,7 @@ util.bfs = (robot, pos_list) => {
 	/** Performs a basic BFS distance calculation
 	 * Probably need to factor in a know impassable list for castles and churches*/
 
-	let pathing_map = make_array(max_dist, [robot.map_s_y, robot.map_s_x]);
+	let pathing_map = util.make_array(max_dist, [robot.map_s_y, robot.map_s_x]);
 	let path_q = []; // apparently javascript copy is weird
 	for (let i = 0; i < pos_list.length; i++){
 		path_q.push(pos_list[i]);
@@ -91,8 +94,8 @@ util.bfs = (robot, pos_list) => {
 	}
 	while (path_q.length > 0){
 		let pos = path_q.shift();
-		for (let i = 0; i < diff_list.length; i++) {
-			let p = util.add_pos(pos, diff_list[i]);
+		for (let i = 0; i < robot.diff_list.length; i++) {
+			let p = util.add_pos(pos, robot.diff_list[i]);
 			let p_d = robot.pathing_map[pos.y][pos.x] + 1;
 			if (robot.on_map(p) && robot.map[p.y][p.x] && p_d < robot.pathing_map[p.y][p.x]) {
 				robot.pathing_map[p.y][p.x] = p_d;
