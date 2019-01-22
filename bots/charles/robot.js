@@ -7,6 +7,14 @@ let verbosity = 0;
 let built = false;
 let step = -1;
 const max_dist = 100000;
+const PATHING_TO_NODE = 0;
+const JUST_REACHED_NODE = 1;
+const PATHING_TO_MAKE_CHURCH = 2;
+const PATHING_BACK = 3;
+const PATHING_TO_CHURCH = 4;
+const MINING = 5;
+const PATHING_TO_PARENT = 6;
+
 
 function make_array_helper(e, l_s, s, end) {
     /** don't use this this is to help with make_array */
@@ -122,7 +130,7 @@ class MyRobot extends BCAbstractRobot {
         let path_q = []; // apparently javascript copy is weird
         for (let i = 0; i < pos_list.length; i++){
             path_q.push(pos_list[i]);
-            pathing_map[pos_list[i].y][pos_list.x] = 0;
+            pathing_map[pos_list[i].y][pos_list[i].x] = 0;
         }
         while (path_q.length > 0){
             let pos = path_q.shift();
@@ -393,14 +401,10 @@ class MyRobot extends BCAbstractRobot {
         return {tree_info: tree_info, voronoi_dist: voronoi_dist, voronoi_id: voronoi_id, child_dists: child_dists};
     }
     init_pilgrim(){
+        /* State variables.*/
+        this.state = 0;
         if (verbosity > 0) {
             this.log('init_pilgrim');
-        }
-        let d;
-        let tic;
-        if (log_times) {
-            d = new Date();
-            tic = d.getTime();
         }
         /** Init move list. Similar to crusader*/
         let diff_list = [];
@@ -415,6 +419,35 @@ class MyRobot extends BCAbstractRobot {
         }
         this.diff_list = diff_list;
         this.rev_diff_list = rev_diff_list;
+        if (verbosity > 1){this.log('made move list');}
+        // this.fuel_map = this.getFuelMap();
+        // this.karb_map = this.getKarbMap();
+        this.parent_castle = undefined;
+        let nearby_bots = this.getVisibleRobots();
+        for (let i = 0; i < nearby_bots.length; i++){
+            if (nearby_bots[i].unit === SPECS.CASTLE || nearby_bots[i].unit === SPECS.CHURCH){
+                if (Math.abs(nearby_bots[i].x - this.me.x) <= 1 && Math.abs(nearby_bots[i].y - this.me.y) <= 1){
+                    this.parent_castle = nearby_bots[i];
+                }
+                this.map[nearby_bots[i].y][nearby_bots[i].x] = false; // This probably doesn't carry over to next turn
+            }
+        }
+        let parent_castle_neighbors = [];
+        for (let dy = -1; dy < 2; dy++){
+            for (let dx = -1; dx < 2; dx++){
+                let p = add_pos(this.me, {x: dx, y: dy});
+                if (this.on_map(p) && this.map[p.y][p.x]){
+                    parent_castle_neighbors.push(p);
+                }
+            }
+        }
+        this.parent_castle_path = this.bfs(parent_castle_neighbors);
+        let d;
+        let tic;
+        if (log_times) {
+            d = new Date();
+            tic = d.getTime();
+        }
 
         /** BFS distances*/
         let fuel_locs = [];
@@ -436,7 +469,7 @@ class MyRobot extends BCAbstractRobot {
 
         }
         this.path_karb = this.bfs(karb_locs);
-
+        if (verbosity > 1){this.log('made bfs distances');}
         // this.fuel_tree_data = this.pilgrim_make_tree([this.me].concat(fuel_locs));
         // this.karb_tree_data = this.pilgrim_make_tree([this.me].concat(karb_locs));
         this.gather_karb = true; // TODO: make some algo for this
@@ -495,51 +528,458 @@ class MyRobot extends BCAbstractRobot {
             return max_dist;
         }
     }
-    turn_pilgrim(){
-        // this.log(this.current_node);
+    turn_path_to_node() {
+        if (this.current_node < 0) {
+            this.log('end of line');
+            return; // ditto as above
+        }
+        // this.log('turn_path_to_node');
+        // for (let i = 1; i < this.tree_data.tree_info.length; i++){
+        //     for (let y = 0; y < this.map_s_y; y++){
+        //         let s = "";
+        //         for (let x = 0; x < this.map_s_x; x++){
+        //             let dist = this.get_tree_dist({x:x, y:y, i: i});
+        //             s += (dist === max_dist)? 'X': dist%10;
+        //         }
+        //         this.log(s);
+        //     }
+        //     this.log('');
+        // }
+        // this.log(this.tree_data.tree_info);
         let tree_info = this.tree_data.tree_info;
         // this.log(tree_info);
         let target = tree_info[this.current_node];
-        // let vis_map = this.getVisibleRobotMap();
+        let vis_map = this.getVisibleRobotMap();
         let visible_robots = this.getVisibleRobots();
+        // let vis_map = this.get
         let target_occupied = false;
-        for (let i = 0; i < visible_robots.length; i++){
+        for (let i = 0; i < visible_robots.length; i++) {
+            // this.log(visible_robots[i]);
             let rob = visible_robots[i];
-            if (rob.unit === SPECS.PILGRIM && rob.x === target.x && rob.y === target.y && rob.team === this.me.team){
+            if (rob.unit === SPECS.PILGRIM && rob.x === target.x && rob.y === target.y && rob.team === this.me.team && rob.id !== this.me.id) {
                 target_occupied = true;
             }
         }
-
+        // this.log(this.current_node);
+        // if (target_occupied){
+        //     this.log('target occupied');
+        // }
         if (this.current_node === 0 ||
-            (this.tree_data.voronoi_id[this.me.y][this.me.x] === this.current_node && !target_occupied)){
-            if (this.current_node < 0){
-                return; // TODO: make the bot do something in this case
-            }
+            (this.tree_data.voronoi_id[this.me.y][this.me.x] === this.current_node && target_occupied)) {
+
             let rand = Math.random() * (tree_info[this.current_node].node_weight - 1);
             let child = -1; // TODO: make leaf node contingency
             let tot = 0;
-            for (let i = 0; i < tree_info[this.current_node].children.length; i++){
+            for (let i = 0; i < tree_info[this.current_node].children.length; i++) {
 
                 child = tree_info[this.current_node].children[i];
                 // this.log(child);
                 tot += tree_info[child].node_weight;
-                if (tot > rand){break;}
+                if (tot > rand) {
+                    break;
+                }
             }
             this.current_node = child;
             target = tree_info[this.current_node];
 
         }
-        if (this.current_node < 0){
-            return; // ditto as above
-        }
+
         let curr_dist = this.get_tree_dist({x: this.me.x, y: this.me.y, i: this.current_node});
-        for (let i = 0; i < this.diff_list.length; i++){
+        if (curr_dist === 0){
+            this.log('arrived');
+            this.log([this.me.x, this.me.y]);
+            this.state = JUST_REACHED_NODE;
+            return this.turn_on_reaching_node();
+        }
+        // this.log(curr_dist);
+        for (let i = 0; i < this.diff_list.length; i++) {
             let p = {x: this.me.x + this.diff_list[i].x, y: this.me.y + this.diff_list[i].y, i: this.current_node};
-            if (this.on_map(p) && this.get_tree_dist(p) === curr_dist - 1 && vis_map[p.y][p.x] <= 0){
+            if (this.on_map(p) && this.get_tree_dist(p) === curr_dist - 1 && vis_map[p.y][p.x] <= 0) {
                 return this.move(this.diff_list[i].x, this.diff_list[i].y);
             }
         }
-        this.log("Help! I'm lost!"); // TODO: make lost contingincy
+        // this.log("Help! I'm lost!"); // TODO: make lost contingincy
+    }
+    turn_on_reaching_node(){
+        this.log('turn_on_reaching_node');
+        this.path_to_node = this.bfs([this.me]);
+        let nearby_units = this.getVisibleRobots();
+        let best_dist = max_dist;
+        let best_church = -1;
+        for (let i = 0; i < nearby_units.length; i++){ // TODO: detect enemy castles
+            if (nearby_units[i].unit === SPECS.CHURCH || nearby_units[i].unit === SPECS.CASTLE){
+                let church = nearby_units[i];
+                let dist = this.path_to_node[church.y][church.x];
+                if (dist < best_dist){
+                    best_church = church;
+                    best_dist = dist;
+                }
+            }
+        }
+        if (best_church === -1){
+            this.has_church = false;
+            return this.init_make_church();
+        }
+        else{
+            this.has_church = true;
+            let church_neighbors = [];
+            for (let dy = -1; dy < 2; dy++){
+                for (let dx = -1; dx < 2; dx++){
+                    let p = add_pos({x: dx, y:dy}, best_church);
+                    if (this.on_map(p) && (dx !== 0 || dy !== 0) && this.map[p.y][p.x]){
+                        church_neighbors.push(p);
+                    }
+                }
+            }
+            this.church = best_church;
+            // this.log(church_neighbors);
+            this.path_to_church = this.bfs(church_neighbors);
+            this.state = MINING;
+            return this.turn_mine();
+        }
+    }
+    init_make_church(){
+        this.log('init_make_church');
+        this.log(this.fuel);
+        this.log(this.karbonite);
+        this.log(this.has_church);
+        if (this.fuel < 200 || this.karbonite < 50 || this.has_church){
+            this.state = MINING;
+            return this.turn_mine();
+        }
+        //TODO: check if there is an existing church
+        let build_neighbors = [];
+        for (let dy = -1; dy < 2; dy++){
+            for (let dx = -1; dx < 2; dx++){
+                if ((dx !== 0 || dy !== 0)){
+                    build_neighbors.push({x:dx, y: dy});
+                }
+            }
+        }
+        let path_q = [this.me];
+        let found_ok = false;
+        while (path_q.length > 0){
+            let pos = path_q.shift();
+            let to_break = false;
+            for (let i = 0; i < 8; i++){
+                let p = add_pos(pos, build_neighbors[i]);
+                if (this.on_map(p) && this.map[p.y][p.x] && !this.fuel_map[p.y][p.x] && !this.karbonite_map[p.y][p.x]) {
+                    this.church_target = pos;
+                    this.build_church_dir = build_neighbors[i];
+                    found_ok = true
+                    to_break = true;
+                    break;
+                }
+            }
+            if (to_break){break;}
+            for (let i = 0; i < this.diff_list.length; i++) {
+                let p = add_pos(pos, this.diff_list[i]);
+                let p_d = this.path_to_node[pos.y][pos.x] + 1;
+                this.log(p_d + " " + this.path_to_node[p.y][p.x]);
+                if (this.on_map(p) && this.map[p.y][p.x] && p_d === this.path_to_node[p.y][p.x]) {
+                    path_q.push(p);
+                }
+            }
+        }
+        if (!found_ok){
+            this.log('no tile found');
+        }
+        this.log("target pos:");
+        // this.log(this.church_target);
+        this.path_to_church_build = this.bfs([this.church_target]); // TODO: Optimize
+        // for (let y = 0; y < this.map_s_y; y++){
+        //     let s = "";
+        //     for (let x = 0; x < this.map_s_x; x++){
+        //         let dist = this.path_to_church_build[y][x];
+        //         s += (dist === max_dist)? 'X': dist%10;
+        //     }
+        //     this.log(s);
+        // }
+        this.state = PATHING_TO_MAKE_CHURCH;
+        return this.turn_path_to_make_church();
+    }
+    turn_path_to_make_church(){
+        this.log('turn_path_to_make_church ' + this.path_to_church_build[this.me.y][this.me.x]);
+        if (this.path_to_church_build[this.me.y][this.me.x] === 0){
+            this.log('arrived at church build site');
+            if (this.fuel < 200 || this.karbonite < 50){
+                this.state = PATHING_BACK;
+                return this.turn_path_back();
+            }
+            this.state = PATHING_BACK;
+            let church_loc = add_pos(this.me, this.build_church_dir);
+            let church_neighbors = [];
+            for (let dy = -1; dy < 2; dy++){
+                for (let dx = -1; dx < 2; dx++){
+                    let p = add_pos({x: dx, y:dy}, church_loc);
+                    // this.log(p);
+                    if (this.on_map(p) && (dx !== 0 || dy !== 0) && this.map[p.y][p.x]){
+                        church_neighbors.push(p);
+                    }
+                }
+            }
+            // this.log(church_neighbors);
+            this.path_to_church = this.bfs(church_neighbors);
+            this.church = add_pos(this.me, this.build_church_dir);
+            return this.buildUnit(SPECS.CHURCH, this.build_church_dir.x, this.build_church_dir.y);
+        }
+        let curr_dist = this.path_to_church_build[this.me.y][this.me.x];
+        for (let i = 0; i < this.diff_list.length; i++) {
+            let p = {x: this.me.x + this.diff_list[i].x, y: this.me.y + this.diff_list[i].y, i: this.current_node};
+            if (this.on_map(p) && this.path_to_church_build[p.y][p.x] === curr_dist - 1 && vis_map[p.y][p.x] <= 0) {
+                return this.move(this.diff_list[i].x, this.diff_list[i].y);
+            }
+        }
+    }
+    turn_path_back(){
+        let vis_map = this.getVisibleRobotMap();
+        this.log('turn_path_back');
+        let curr_dist = this.path_to_node[this.me.y][this.me.x];
+        if (curr_dist === 0){
+            this.state = MINING;
+            this.turn_mine();
+        }
+        for (let i = 0; i < this.diff_list.length; i++) {
+            let p = {x: this.me.x + this.diff_list[i].x, y: this.me.y + this.diff_list[i].y, i: this.current_node};
+            if (this.on_map(p) && this.path_to_node[p.y][p.x] === curr_dist - 1 && vis_map[p.y][p.x] <= 0) {
+                return this.move(this.diff_list[i].x, this.diff_list[i].y);
+            }
+        }
+    }
+    turn_mine(){
+        this.log('turn_mide');
+        this.log(this.me);
+        if (this.me.fuel >= 100 || this.me.karbonite >= 20){
+            if (!this.has_church && this.fuel >= 200 && this.karbonite >= 50){
+                return this.init_make_church();
+            }
+            this.state  = PATHING_TO_CHURCH;
+            return this.turn_path_to_church();
+        }
+        return this.mine();
+    }
+    turn_path_to_church(){
+        let vis_map = this.getVisibleRobotMap();
+        this.log('turn_path_to_church');
+        /*if (this.fuel < 200 || this.karbonite < 50){
+            if (this.me.fuel >= 100 || this.me.karbonite >= 20){
+                this.state = PATHING_TO_PARENT;
+                return this.turn_path_to_parent();
+            }
+            this.state = MINING
+        }*/
+        // TODO: contigency if church destroyed
+        let dist_map = this.has_church? this.path_to_church: this.parent_castle_path;
+        let target_loc = this.has_church? this.church: this.parent_castle;
+        let curr_dist = dist_map[this.me.y][this.me.x];
+        if (curr_dist === 0){
+
+            this.log('arrived at deposit point');
+            this.state = PATHING_BACK;
+            return this.give(target_loc.x - this.me.x, target_loc.y - this.me.y, this.me.karbonite, this.me.fuel);
+        }
+        for (let i = 0; i < this.diff_list.length; i++) {
+            let p = {x: this.me.x + this.diff_list[i].x, y: this.me.y + this.diff_list[i].y, i: this.current_node};
+            if (this.on_map(p) && dist_map[p.y][p.x] === curr_dist - 1 && vis_map[p.y][p.x] <= 0) {
+                return this.move(this.diff_list[i].x, this.diff_list[i].y);
+            }
+        }
+    }
+    turn_pilgrim(){
+        // this.log(this.state);
+        switch (this.state){
+            case PATHING_TO_NODE:
+                // this.log('pathing to node');
+                return this.turn_path_to_node();
+            case PATHING_TO_MAKE_CHURCH:
+                // this.log('pathing to make church');
+                return this.turn_path_to_make_church();
+            case PATHING_BACK:
+                // this.log('pathing back');
+                return this.turn_path_back();
+            case MINING:
+                // this.log('mining');
+                return this.turn_mine();
+            case PATHING_TO_CHURCH:
+                // this.log('pathing to church');
+                return this.turn_path_to_church();
+
+        }
+        this.log('halp!');
+        /*switch (this.state){
+            case PATHING_TO_NODE:
+                // this.log(this.current_node);
+                let tree_info = this.tree_data.tree_info;
+                // this.log(tree_info);
+                let target = tree_info[this.current_node];
+                let vis_map = this.getVisibleRobotMap();
+                let visible_robots = this.getVisibleRobots();
+                // let vis_map = this.get
+                let target_occupied = false;
+                for (let i = 0; i < visible_robots.length; i++) {
+                    let rob = visible_robots[i];
+                    if (rob.unit === SPECS.PILGRIM && rob.x === target.x && rob.y === target.y && rob.team === this.me.team && rob.id !== this.me.id) {
+                        target_occupied = true;
+                    }
+                }
+
+                if (this.current_node === 0 ||
+                    (this.tree_data.voronoi_id[this.me.y][this.me.x] === this.current_node && !target_occupied)) {
+
+                    let rand = Math.random() * (tree_info[this.current_node].node_weight - 1);
+                    let child = -1; // TODO: make leaf node contingency
+                    let tot = 0;
+                    for (let i = 0; i < tree_info[this.current_node].children.length; i++) {
+
+                        child = tree_info[this.current_node].children[i];
+                        // this.log(child);
+                        tot += tree_info[child].node_weight;
+                        if (tot > rand) {
+                            break;
+                        }
+                    }
+                    this.current_node = child;
+                    target = tree_info[this.current_node];
+
+                }
+                if (this.current_node < 0) {
+                    return; // ditto as above
+                }
+                let curr_dist = this.get_tree_dist({x: this.me.x, y: this.me.y, i: this.current_node});
+                for (let i = 0; i < this.diff_list.length; i++) {
+                    let p = {x: this.me.x + this.diff_list[i].x, y: this.me.y + this.diff_list[i].y, i: this.current_node};
+                    if (this.on_map(p) && this.get_tree_dist(p) === curr_dist - 1 && vis_map[p.y][p.x] <= 0) {
+                        if (curr_dist === 1){
+                            this.state = JUST_REACHED_NODE;
+                        }
+                        return this.move(this.diff_list[i].x, this.diff_list[i].y);
+                    }
+                }
+                this.log("Help! I'm lost!"); // TODO: make lost contingincy
+                break;
+            case JUST_REACHED_NODE:
+                this.path_to_node = this.bfs([this.me]);
+                let nearby_units = this.getVisibleRobots();
+                let best_dist = max_dist;
+                let best_church = -1;
+                for (let i = 0; i < nearby_units.length; i++){
+                    if (nearby_units[i].unit === SPECS.CHURCH || nearby_units[i].unit === SPECS.CASTLE){
+                        let church = nearby_units[i];
+                        let dist = this.path_to_node[church.y][church.x];
+                        if (dist < best_dist){
+                            best_church = church;
+                            best_dist = dist;
+                        }
+                    }
+                }
+                if (best_church === -1){
+                    this.has_church = false;
+                    let build_neighbors = [];
+                    for (let dy = -1; dy < 2; dy++){
+                        for (let dx = -1; dx < 2; dx++){
+                            if ((dx !== 0 || dy !== 0)){
+                                build_neighbors.push({x:dx, y: dy});
+                            }
+                        }
+                    }
+                    let path_q = [this.me];
+                    while (path_q.length > 0){
+                        let pos = path_q.shift();
+                        let to_break = false;
+                        for (let i = 0; i < 8; i++){
+                            let p = add_pos(pos, build_neighbors[i]);
+                            if (this.on_map(p) && this.map[p.y][p.x] && !this.fuel_map[p.y][p.x] && !this.karbonite_map[p.y][p.x]) {
+                                this.church_target = p;
+                                this.build_church_dir = build_neighbors[i];
+                                to_break = true;
+                                break;
+                            }
+                        }
+                        if (to_break){break;}
+                        for (let i = 0; i < this.diff_list.length; i++) {
+                            let p = add_pos(pos, this.diff_list[i]);
+                            let p_d = pathing_map[pos.y][pos.x] + 1;
+                            if (this.on_map(p) && this.map[p.y][p.x] && p_d === this.path_to_node[p.y][p.x]) {
+                                path_q.push(p);
+                            }
+                        }
+                    }
+                    this.path_to_church_build = this.bfs([this.church_target]); // TODO: Optimize
+                    this.state = PATHING_TO_MAKE_CHURCH;
+                }
+                else{
+                    this.has_church = true;
+                    let church_neighbors = [];
+                    for (let dy = -1; dy < 2; dy++){
+                        for (let dx = -1; dx < 2; dx++){
+                            p = add_pos({x: dx, y:dy}, best_church);
+                            if (on_map(p) && (dx !== 0 || dy !== 0) && this.map[p.y][p.x]){
+                                church_neighbors.push(p);
+                            }
+                        }
+                    }
+                    this.church = best_church;
+                    this.path_to_church = this.bfs([church_neighbors]);
+                    this.state = MINING;
+                }
+                // intentionally no break
+            case PATHING_TO_MAKE_CHURCH:
+                if (this.path_to_church_build[this.me.y][this.me.x] === 0){
+                    this.state = PATHING_BACK;
+                    let church_neighbors = [];
+                    for (let dy = -1; dy < 2; dy++){
+                        for (let dx = -1; dx < 2; dx++){
+                            p = add_pos({x: dx, y:dy}, church_neighbors);
+                            if (on_map(p) && (dx !== 0 || dy !== 0) && this.map[p.y][p.x]){
+                                church_neighbors.push(p);
+                            }
+                        }
+                    }
+                    this.path_to_church = this.bfs([church_neighbors]);
+                    this.church = add_pos(this.me, this.build_church_dir);
+                    return this.buildUnit(SPECS.CHURCH, this.build_church_dir.x, this.build_church_dir.y);
+                }
+                curr_dist = this.path_to_church_build[this.me.y][this.me.x];
+                for (let i = 0; i < this.diff_list.length; i++) {
+                    let p = {x: this.me.x + this.diff_list[i].x, y: this.me.y + this.diff_list[i].y, i: this.current_node};
+                    if (this.on_map(p) && this.path_to_church_build[p.y][p.x] === curr_dist - 1 && vis_map[p.y][p.x] <= 0) {
+                        return this.move(this.diff_list[i].x, this.diff_list[i].y);
+                    }
+                }
+                break;
+            case PATHING_BACK:
+                curr_dist = this.path_to_node[this.me.y][this.me.x];
+                if (curr_dist === 1){
+                    this.state = MINING;
+                }
+                for (let i = 0; i < this.diff_list.length; i++) {
+                    let p = {x: this.me.x + this.diff_list[i].x, y: this.me.y + this.diff_list[i].y, i: this.current_node};
+                    if (this.on_map(p) && this.path_to_node[p.y][p.x] === curr_dist - 1 && vis_map[p.y][p.x] <= 0) {
+                        return this.move(this.diff_list[i].x, this.diff_list[i].y);
+                    }
+                }
+                break;
+            case MINING:
+                if (this.me.fuel === 90 || this.me.karbonite === 18){
+                    this.state  = PATHING_TO_CHURCH;
+                }
+                return this.mine();
+            case PATHING_TO_CHURCH:
+                curr_dist = this.path_to_church[this.me.y][this.me.x];
+                if (curr_dist === 0){
+                    this.state = PATHING_BACK;
+                    this.give(this.church.x - this.me.x, this.church.y - this.me.y, this.me.karbonite, this.me.fuel);
+                }
+                for (let i = 0; i < this.diff_list.length; i++) {
+                    let p = {x: this.me.x + this.diff_list[i].x, y: this.me.y + this.diff_list[i].y, i: this.current_node};
+                    if (this.on_map(p) && this.path_to_node[p.y][p.x] === curr_dist - 1 && vis_map[p.y][p.x] <= 0) {
+                        return this.move(this.diff_list[i].x, this.diff_list[i].y);
+                    }
+                }
+                // for (let i = 0; i < this.)
+                break;*/
+
+
     }
     turn() {
         this.init();
