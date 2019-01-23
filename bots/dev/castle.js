@@ -10,7 +10,7 @@ castle.init = (self) => {
 castle.turn = (self) => {
 	self.log("Castle health: " + self.me.health + " on turn " + self.me.turn + " with time " + self.me.time);
 	var availableDirections = util.find_open_adjacents(self);
-	if(self.me.turn < 4){
+	if(self.me.turn < 4 || true){
 		for(var d of availableDirections){
 			if(util.can_buildUnit(self, SPECS.PILGRIM, d[0], d[1])){
 				return self.buildUnit(SPECS.PILGRIM, d[0], d[1]);
