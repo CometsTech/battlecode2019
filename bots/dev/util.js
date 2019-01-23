@@ -85,20 +85,19 @@ util.on_map = (robot, a) => {
 util.bfs = (robot, pos_list) => {
 	/** Performs a basic BFS distance calculation
 	 * Probably need to factor in a know impassable list for castles and churches*/
-
 	let pathing_map = util.make_array(max_dist, [robot.map_s_y, robot.map_s_x]);
 	let path_q = []; // apparently javascript copy is weird
 	for (let i = 0; i < pos_list.length; i++){
 		path_q.push(pos_list[i]);
-		pathing_map[pos_list[i].y][pos_list.x] = 0;
+		pathing_map[pos_list[i].y][pos_list[i].x] = 0;
 	}
 	while (path_q.length > 0){
 		let pos = path_q.shift();
 		for (let i = 0; i < robot.diff_list.length; i++) {
 			let p = util.add_pos(pos, robot.diff_list[i]);
-			let p_d = robot.pathing_map[pos.y][pos.x] + 1;
-			if (robot.on_map(p) && robot.map[p.y][p.x] && p_d < robot.pathing_map[p.y][p.x]) {
-				robot.pathing_map[p.y][p.x] = p_d;
+			let p_d = pathing_map[pos.y][pos.x] + 1;
+			if (util.on_map(robot, p) && robot.map[p.y][p.x] && p_d < pathing_map[p.y][p.x]) {
+				pathing_map[p.y][p.x] = p_d;
 				path_q.push(p);
 			}
 		}
