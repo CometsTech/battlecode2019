@@ -105,4 +105,8 @@ util.bfs = (robot, pos_list) => {
 	return pathing_map;
 };
 
+util.squared_distance = (a, b) => {
+	return (a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y);
+};
+
 export default util

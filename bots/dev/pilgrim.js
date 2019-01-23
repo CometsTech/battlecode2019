@@ -221,11 +221,13 @@ pilgrim.init = (self) => {
     }
     // return;
     /** Init move list. Similar to crusader*/
+    let inv_diff_list = util.make_array(-1, [5, 5]);
     let diff_list = [];
     let rev_diff_list = [];
     for (let j = -2; j < 3; j++){
         for (let i = -2; i < 3; i++){
             if ((i * i + j * j <= 4) && (i !== 0 || j !== 0)){
+                inv_diff_list[j + 2][i + 2] = diff_list.length;
                 diff_list.push({x:i, y:j});
                 rev_diff_list.push({x:-i, y:-j});
             }
@@ -233,6 +235,7 @@ pilgrim.init = (self) => {
     }
     self.diff_list = diff_list;
     self.rev_diff_list = rev_diff_list;
+    self.inv_diff_list = inv_diff_list;
     if (verbosity > 1){self.log('made move list');}
     // this.fuel_map = this.getFuelMap();
     // this.karb_map = this.getKarbMap();
@@ -271,7 +274,7 @@ pilgrim.init = (self) => {
             }
         }
     }
-    self.path_fuel = util.bfs(self, fuel_locs);
+    // self.path_fuel = util.bfs(self, fuel_locs);
     let karb_locs = [];
     for (let j = 0; j < self.map_s_y; j++){
         for (let i = 0; i < self.map_s_x; i++){
@@ -336,7 +339,7 @@ function turn_path_to_node(self) {
     let tree_info = self.tree_data.tree_info;
     // this.log(tree_info);
     let target = tree_info[self.current_node];
-    let vis_map = self.getVisibleRobotMap();
+    // let vis_map = self.getVisibleRobotMap();
     let visible_robots = self.getVisibleRobots();
     // let vis_map = this.get
     let target_occupied = false;
@@ -379,9 +382,16 @@ function turn_path_to_node(self) {
         return turn_on_reaching_node(self);
     }
     // this.log(curr_dist);
+    let diff_vis = util.make_array(-1, [self.diff_list.length]);
+    for (let i = 0; i < visible_robots.length; i++) {
+        let rob = visible_robots[i];
+        if (util.squared_distance(rob, self.me) <= 4 && rob.id !== self.me.id) {
+            diff_vis[self.inv_diff_list[rob.y - self.me.y + 2][rob.x - self.me.x + 2]] = rob.id;
+        }
+    }
     for (let i = 0; i < self.diff_list.length; i++) {
         let p = {x: self.me.x + self.diff_list[i].x, y: self.me.y + self.diff_list[i].y, i: self.current_node};
-        if (util.on_map(self, p) && get_tree_dist(self, p) === curr_dist - 1 && vis_map[p.y][p.x] <= 0) {
+        if (util.on_map(self, p) && get_tree_dist(self, p) === curr_dist - 1 && diff_vis[i] <= 0) {
             return self.move(self.diff_list[i].x, self.diff_list[i].y);
         }
     }
@@ -472,7 +482,7 @@ function init_make_church(self){
     }
     self.log("target pos:");
     // this.log(this.church_target);
-    self.path_to_church_build = util.bfs(self,[this.church_target]); // TODO: Optimize
+    self.path_to_church_build = util.bfs(self,[self.church_target]); // TODO: Optimize
     // for (let y = 0; y < this.map_s_y; y++){
     //     let s = "";
     //     for (let x = 0; x < this.map_s_x; x++){
