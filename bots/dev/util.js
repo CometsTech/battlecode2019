@@ -22,8 +22,12 @@ util.can_attack = (robot, dx, dy) => {
 };
 
 util.can_buildUnit = (robot, unit, dx, dy) => {
-	if(util.is_open(robot, robot.me.x+dx, robot.me.y+dy) && robot.karbonite > SPECS.UNITS[unit].CONSTRUCTION_KARBONITE && robot.fuel > SPECS.UNITS[unit].CONSTRUCTION_FUEL && robot.map[robot.me.x+dx][robot.me.y+dy] && dx*dx + dy*dy <= 2) return true;
-	return false
+	let min_karb = Math.min(robot.me.turn, 50);
+	let min_fuel = Math.min(robot.me.turn * 4, 200);
+	return (util.is_open(robot, robot.me.x+dx, robot.me.y+dy) &&
+		robot.karbonite > SPECS.UNITS[unit].CONSTRUCTION_KARBONITE + min_karb&&
+		robot.fuel > SPECS.UNITS[unit].CONSTRUCTION_FUEL + min_fuel&&
+		robot.map[robot.me.x+dx][robot.me.y+dy] && dx*dx + dy*dy <= 2);
 };
 
 util.can_mine = (robot) => {
@@ -107,6 +111,23 @@ util.bfs = (robot, pos_list) => {
 
 util.squared_distance = (a, b) => {
 	return (a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y);
+};
+
+util.rand_int = (n) => {
+	return Math.floor(n * Math.random());
+};
+
+util.rand_weight = (a) => {
+	let tot = 0;
+	for (let i = 0; i < a.length; i++){
+		tot += a[i];
+	}
+	let rand_cap = tot * Math.random();
+	tot = 0;
+	for (let i = 0; i < a.length; i++){
+		tot += a[i];
+		if (tot > rand_cap){return i;}
+	}
 };
 
 export default util

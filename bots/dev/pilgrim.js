@@ -242,7 +242,8 @@ pilgrim.init = (self) => {
     self.parent_castle = undefined;
     let nearby_bots = self.getVisibleRobots();
     for (let i = 0; i < nearby_bots.length; i++){
-        if (nearby_bots[i].unit === SPECS.CASTLE || nearby_bots[i].unit === SPECS.CHURCH){
+        if (nearby_bots[i].team === self.me.team &&
+            (nearby_bots[i].unit === SPECS.CASTLE || nearby_bots[i].unit === SPECS.CHURCH)){
             if (Math.abs(nearby_bots[i].x - self.me.x) <= 1 && Math.abs(nearby_bots[i].y - self.me.y) <= 1){
                 self.parent_castle = nearby_bots[i];
             }
@@ -252,7 +253,7 @@ pilgrim.init = (self) => {
     let parent_castle_neighbors = [];
     for (let dy = -1; dy < 2; dy++){
         for (let dx = -1; dx < 2; dx++){
-            let p = util.add_pos(self.me, {x: dx, y: dy});
+            let p = util.add_pos(self.parent_castle, {x: dx, y: dy});
             if (util.on_map(self, p) && self.map[p.y][p.x]){
                 parent_castle_neighbors.push(p);
             }
@@ -290,6 +291,17 @@ pilgrim.init = (self) => {
     // this.fuel_tree_data = this.pilgrim_make_tree([this.me].concat(fuel_locs));
     // this.karb_tree_data = this.pilgrim_make_tree([this.me].concat(karb_locs));
     self.gather_karb = true; // TODO: make some algo for this
+    if (self.me.turn === 1){
+        self.gather_karb = true;
+    }
+    else if (self.me.turn === 2){
+        self.gather_karb = false;
+    }
+    else{
+        let fuel_weight = self.fuel / 10;
+        let karb_weight = self.karbonite / 2;
+        self.gather_karb = Math.random() * (fuel_weight + karb_weight) < fuel_weight;
+    }
     // return;
     self.tree_data = pilgrim_make_tree(self, [self.me].concat(self.gather_karb?karb_locs:fuel_locs));
     self.current_node = 0;
@@ -354,9 +366,8 @@ function turn_path_to_node(self) {
     // if (target_occupied){
     //     this.log('target occupied');
     // }
-    if (self.current_node === 0 ||
+    if ((self.current_node === 0 && !(self.gather_karb?self.karbonite_map: self.fuel_map)[target.y][target.x]) ||
         (self.tree_data.voronoi_id[self.me.y][self.me.x] === self.current_node && target_occupied)) {
-
         let rand = Math.random() * (tree_info[self.current_node].node_weight - 1);
         let child = -1; // TODO: make leaf node contingency
         let tot = 0;
@@ -370,6 +381,13 @@ function turn_path_to_node(self) {
             }
         }
         self.current_node = child;
+        if (child === -1){
+            self.log('end of line');
+            return;
+        }
+        // if (typeof child == 'undefined'){
+        //     self.log('current node undefined')
+        // }
         target = tree_info[self.current_node];
 
     }
@@ -400,11 +418,14 @@ function turn_path_to_node(self) {
 function turn_on_reaching_node(self){
     self.log('turn_on_reaching_node');
     self.path_to_node = util.bfs(self, [self.me]);
-    let nearby_units = self.getVisibleRobots();
-    let best_dist = max_dist;
+    let nearby_units = self.vis_bots;
+    let best_dist = max_dist + 1;
     let best_church = -1;
+    // self.log(nearby_units);
+    // self.log(self.me.team);
     for (let i = 0; i < nearby_units.length; i++){ // TODO: detect enemy castles
-        if (nearby_units[i].unit === SPECS.CHURCH || nearby_units[i].unit === SPECS.CASTLE){
+        if (nearby_units[i].team === self.me.team &&
+            (nearby_units[i].unit === SPECS.CHURCH || nearby_units[i].unit === SPECS.CASTLE)){
             let church = nearby_units[i];
             let dist = self.path_to_node[church.y][church.x];
             if (dist < best_dist){
@@ -439,6 +460,7 @@ function init_make_church(self){
     self.log(self.fuel);
     self.log(self.karbonite);
     self.log(self.has_church);
+
     if (self.fuel < 200 || self.karbonite < 50 || self.has_church){
         self.state = MINING;
         return turn_mine(self);
@@ -462,7 +484,7 @@ function init_make_church(self){
             if (util.on_map(self, p) && self.map[p.y][p.x] && !self.fuel_map[p.y][p.x] && !self.karbonite_map[p.y][p.x]) {
                 self.church_target = pos;
                 self.build_church_dir = build_neighbors[i];
-                found_ok = true
+                found_ok = true;
                 to_break = true;
                 break;
             }
@@ -503,6 +525,13 @@ function turn_path_to_make_church(self){
         }
         self.state = PATHING_BACK;
         let church_loc = util.add_pos(self.me, self.build_church_dir);
+        for (let i = 0; i < self.vis_bots.length; i++){
+            let bot = self.vis_bots[i];
+            if (bot.x === church_loc.x && bot.y === church_loc.y){
+                self.log('church build site cccupied');
+                return turn_path_back(self);
+            }
+        }
         let church_neighbors = [];
         for (let dy = -1; dy < 2; dy++){
             for (let dx = -1; dx < 2; dx++){
@@ -513,7 +542,7 @@ function turn_path_to_make_church(self){
                 }
             }
         }
-        // this.log(church_neighbors);
+        self.log(church_neighbors);
         self.path_to_church = util.bfs(self, church_neighbors);
         self.church = util.add_pos(self.me, self.build_church_dir);
         return self.buildUnit(SPECS.CHURCH, self.build_church_dir.x, self.build_church_dir.y);
@@ -521,10 +550,23 @@ function turn_path_to_make_church(self){
     let curr_dist = self.path_to_church_build[self.me.y][self.me.x];
     for (let i = 0; i < self.diff_list.length; i++) {
         let p = {x: self.me.x + self.diff_list[i].x, y: self.me.y + self.diff_list[i].y, i: self.current_node};
-        if (util.on_map(self, p) && self.path_to_church_build[p.y][p.x] === curr_dist - 1 && vis_map[p.y][p.x] <= 0) {
+        if (util.on_map(self, p) && self.path_to_church_build[p.y][p.x] === curr_dist - 1 && self.vis_map[p.y][p.x] <= 0) {
             return self.move(self.diff_list[i].x, self.diff_list[i].y);
         }
     }
+    let valid_dirs = [];
+    for (let i = 0; i < self.diff_list.length; i++) {
+        let p = {x: self.me.x + self.diff_list[i].x, y: self.me.y + self.diff_list[i].y, i: self.current_node};
+        if (util.on_map(self, p) && self.path_to_church_build[p.y][p.x] === curr_dist && self.vis_map[p.y][p.x] <= 0) {
+            valid_dirs.push(self.diff_list[i]);
+        }
+    }
+    if (valid_dirs.length === 0){
+        self.log('path_make_church blocked');
+        return
+    }
+    let i = util.rand_int(valid_dirs.length);
+    return self.move(valid_dirs[i].x, valid_dirs[i].y);
 }
 function turn_path_back(self){
     let vis_map = self.getVisibleRobotMap();
@@ -539,9 +581,58 @@ function turn_path_back(self){
             return self.move(self.diff_list[i].x, self.diff_list[i].y);
         }
     }
+    if (curr_dist === 1){
+        self.state = PATHING_TO_NODE;
+        turn_path_to_node(self);
+    }
+    let valid_dirs = [];
+    for (let i = 0; i < self.diff_list.length; i++) {
+        let p = {x: self.me.x + self.diff_list[i].x, y: self.me.y + self.diff_list[i].y, i: self.current_node};
+        if (util.on_map(self, p) && self.path_to_node[p.y][p.x] === curr_dist && vis_map[p.y][p.x] <= 0) {
+            valid_dirs.push(self.diff_list[i]);
+        }
+    }
+    if (valid_dirs.length === 0){
+        self.log('path_back blocked');
+        return
+    }
+    let i = util.rand_int(valid_dirs.length);
+    return self.move(valid_dirs[i].x, valid_dirs[i].y);
 }
 function turn_mine(self){
     if (self.me.fuel >= 100 || self.me.karbonite >= 20){
+        let nearby_units = self.vis_bots;
+        let best_dist = max_dist + 1;
+        let best_church = -1;
+        for (let i = 0; i < nearby_units.length; i++){
+            if (nearby_units[i].team === self.me.team &&
+                (nearby_units[i].unit === SPECS.CHURCH || nearby_units[i].unit === SPECS.CASTLE)){
+                let church = nearby_units[i];
+                let dist = self.path_to_node[church.y][church.x];
+                if (dist < best_dist){
+                    best_church = church;
+                    best_dist = dist;
+                }
+            }
+        }
+        if (best_church === -1){
+            // self.has_church = false; TODO: revisit
+        }
+        else{
+            self.has_church = true;
+            let church_neighbors = [];
+            for (let dy = -1; dy < 2; dy++){
+                for (let dx = -1; dx < 2; dx++){
+                    let p = util.add_pos({x: dx, y:dy}, best_church);
+                    if (util.on_map(self, p) && (dx !== 0 || dy !== 0) && self.map[p.y][p.x]){
+                        church_neighbors.push(p);
+                    }
+                }
+            }
+            self.church = best_church;
+            // this.log(church_neighbors);
+            self.path_to_church = util.bfs(self, church_neighbors);
+        }
         if (!self.has_church && self.fuel >= 200 && self.karbonite >= 50){
             return init_make_church(self);
         }
@@ -567,6 +658,8 @@ function turn_path_to_church(self){
     if (curr_dist === 0){
 
         self.log('arrived at deposit point');
+        self.log(target_loc);
+        self.log(self.me.karbonite + " " + self.me.fuel);
         self.state = PATHING_BACK;
         return self.give(target_loc.x - self.me.x, target_loc.y - self.me.y, self.me.karbonite, self.me.fuel);
     }
@@ -576,9 +669,24 @@ function turn_path_to_church(self){
             return self.move(self.diff_list[i].x, self.diff_list[i].y);
         }
     }
+    let valid_dirs = [];
+    for (let i = 0; i < self.diff_list.length; i++) {
+        let p = {x: self.me.x + self.diff_list[i].x, y: self.me.y + self.diff_list[i].y, i: self.current_node};
+        if (util.on_map(self, p) && dist_map[p.y][p.x] === curr_dist && vis_map[p.y][p.x] <= 0) {
+            valid_dirs.push(self.diff_list[i]);
+        }
+    }
+    if (valid_dirs.length === 0){
+        self.log('path_to_church blocked');
+        return
+    }
+    let i = util.rand_int(valid_dirs.length);
+    return self.move(valid_dirs[i].x, valid_dirs[i].y);
 }
 pilgrim.turn = (self) => {
     // this.log(this.state);
+    self.vis_bots = self.getVisibleRobots();
+    self.vis_map = self.getVisibleRobotMap(); // TODO slow
     switch (self.state){
         case PATHING_TO_NODE:
             // this.log('pathing to node');
