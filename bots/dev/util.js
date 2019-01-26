@@ -6,6 +6,11 @@ const max_dist = 100000;
 
 const DIRECTIONS = [[0, 1], [1, 1], [1, 0], [1, -1], [0, -1], [-1, -1], [-1, 0], [-1, 1]];
 
+// const SIGNALS
+
+// util.CONSTANTS = {DIRECTIONS: DIRECTIONS,
+// 					SIGNALS: SIGNALS}
+
 util.find_open_adjacents = (robot) => {
 	var open = [];
 	var x = robot.me.x, y = robot.me.y;
@@ -108,5 +113,42 @@ util.bfs = (robot, pos_list) => {
 util.squared_distance = (a, b) => {
 	return (a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y);
 };
+
+util.between = (min, max, num) => {
+	return ((num <= max) && (num >= min));
+}
+
+util.close_to_far = (mindist, maxdist) => {
+	max1d = Math.ceil(Math.sqrt(dist));
+	let retval = [];
+	for (let i = 1; i <= max1d; i++) {
+		if (util.between(mindist, maxdist, i*i)) {
+			retval.push({x: i, y: 0}, {x: -i, y: 0}, {x: 0, y: -i}, {x: 0, y: i});
+		}
+		for (let j = 1; j < i; j++) {
+			if (util.between(mindist, maxdist, i*i+j*j)) {
+				retval.push({x: i, y: j}, {x: -i, y: j}, {x: i, y: -j}, {x: -i, y: -j},
+							{x: j, y: i}, {x: -j, y: i}, {x: j, y: -i}, {x: -j, y: -i});
+			}
+		}
+		if (util.between(mindist, maxdist, 2*i*i)) {
+			retval.push({x: i, y: i}, {x: -i, y: i}, {x: i, y: -i}, {x: -i, y: -i});
+		}
+	}
+	return retval;
+}
+
+util.nearest_enemies = (robot, close_to_far) => {
+	let map = robot.getVisibleRobotMap();
+	let retval = [];
+	for (dir of close_to_far) {
+		if (map[dir.y][dir.x] > 0) {
+			if (robot.getRobot(map[dir.y][dir.x]).team != robot.me.team) {
+				retval.push({x: dir.x, y: dir.y, id: map[dir.y][dir.x]});
+			}
+		}
+	}
+	return retval;
+}
 
 export default util

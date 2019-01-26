@@ -17,6 +17,7 @@ class MyRobot extends BCAbstractRobot{
 		this.map_s_y = this.map.length;
 		this.map_s_x = this.map[0].length;
 		this.inited = true;
+		this.castleTalk(this.me.unit)
 		switch(this.me.unit){
 			case SPECS.CASTLE:
 				return castle.init(this);
