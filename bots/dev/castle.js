@@ -90,7 +90,13 @@ castle.turn = (self) => {
 };
 
 function turn_build_pilgrims(self){
-    return rand_build(self, SPECS.PILGRIM, self.availableDirections);
+    let try_build = rand_build(self, SPECS.PILGRIM, self.availableDirections);
+    if (try_build === undefined) {
+    	return; // TODO add functionality
+    }
+    else {
+    	return try_build;
+    }
 }
 
 function turn_turtle(self){
@@ -121,7 +127,13 @@ function turn_defend(self){
 		}
 		// if the optimal spot is taken, just build randomly
 		// TOOD make this smarter
-		return rand_build(self, SPECS.CRUSADER, self.availableDirections, 0.4);
+		let try_build = rand_build(self, SPECS.CRUSADER, self.availableDirections, 0.4);
+		if (try_build ===  undefined) {
+			return;
+		}
+		else {
+			return try_build;
+		}
 	}
 	else {
 		self.near_attacker = self.nearest.nearest_enemy_attacker;
@@ -152,7 +164,13 @@ function turn_defend(self){
 			if (util.can_buildUnit(self, SPECS.PREACHER, make_dir.dx, make_dir.dy)) {
 				return self.buildUnit(SPECS.PREACHER, make_dir.dx, make_dir.dy);
 			}
-			return rand_build(self, SPECS.PREACHER, self.availableDirections, 0.5);
+			let try_build = rand_build(self, SPECS.PREACHER, self.availableDirections, 0.5);
+			if (try_build === undefined) {
+				return;
+			}
+			else {
+				return try_build;
+			}
 		}
 
 	}
@@ -177,7 +195,7 @@ function rand_build(self, unit, dirs, override_savings=0){
 	}
 	if (ok_dirs.length === 0){
 		self.log("Unable to build unit " + unit)
-		return;
+		return undefined;
 	}
 	let i = util.rand_int(ok_dirs.length);
 
