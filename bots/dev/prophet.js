@@ -6,8 +6,9 @@ var prophet = {};
 const max_dist = 100000;
 
 const TURTLING = 0;
-const ATTACKING = 1;
-const CHARGING = 2;
+const MOVING = 1;
+const ATTACKING = 2;
+const CHARGING = 3;
 
 prophet.init = (self) => {
 	let diff_list = [];
@@ -90,6 +91,9 @@ prophet.turn = (self) => {
 		case TURTLING:
 			return turn_turtle(self);
 			break;
+		case MOVING:
+			return turn_moving(self);
+			break;
 		case ATTACKING:
 			return turn_not_turtling(self);
 			break;
@@ -169,6 +173,43 @@ function turn_not_turtling(self) {
 		}
 	}
 	return self.move(self.diff_list[dir_i].x, self.diff_list[dir_i].y);
+}
+
+function turn_moving(self){
+	/*MOVING aka PATHING toward enemy base*/
+}
+
+
+function turn_attacking(self){
+	var visibleRobots = self.getVisibleRobots();
+	var visibleEnemies = visibleRobots.filter(robot => robot.team != self.me.team);
+
+	if (visibleEnemies.length === 0) {
+		self.state = MOVING;
+		return;
+	}
+
+	var numEnemyClose = 0, numEnemyRange = 0;
+
+	for(var robot of visibleEnemies){
+		var dx = robot.x - self.me.x, dy = robot.y - self.me.y;
+		if(util.can_attack(self, dx, dy)){
+			self.log("Prophet attacking");
+			return self.attack(dx, dy);
+		}
+
+		if(robot.unit === SPECS.PROPHET){
+			numEnemyRange += 1;
+		}
+		else{
+			numEnemyClose += 1;
+		}
+	}
+	
+	//If unable to attack, then either move closer or farther out of range
+	if(numEnemyRange >= numEnemyClose){
+	
+	}
 }
 
 export default prophet;

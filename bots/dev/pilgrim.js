@@ -1,4 +1,3 @@
-
 import {BCAbstractRobot, SPECS} from 'battlecode';
 import util from "./util.js";
 
@@ -131,6 +130,7 @@ pilgrim.init = (self) => {
     }
     self.made_voronoi_dist = false;
 };
+
 function turn_reset(self){
     self.log('resettting')
     if (self.tree_data.voronoi_id[self.me.y][self.me.x] === 0){
@@ -176,6 +176,7 @@ function turn_reset(self){
     let i = util.rand_int(valid_dirs.length);
     return self.move(valid_dirs[i].x, valid_dirs[i].y);
 }
+
 function turn_path_to_node(self) {
     if (self.current_node < 0) {
         self.log('end of line');
@@ -322,6 +323,7 @@ function turn_path_to_node(self) {
     return self.move(valid_dirs[i].x, valid_dirs[i].y);
     // this.log("Help! I'm lost!"); // TODO: make lost contingincy
 }
+
 function turn_on_reaching_node(self){
     self.log('turn_on_reaching_node');
     self.path_to_node = util.bfs(self, [self.me]);
@@ -363,6 +365,7 @@ function turn_on_reaching_node(self){
         return turn_mine(self);
     }
 }
+
 function init_make_church(self){
     self.log(self.fuel);
     self.log(self.karbonite);
@@ -423,6 +426,7 @@ function init_make_church(self){
     self.state = PATHING_TO_MAKE_CHURCH;
     return turn_path_to_make_church(self);
 }
+
 function turn_path_to_make_church(self){
     if (self.path_to_church_build[self.me.y][self.me.x] === 0){
         self.log('arrived at church build site');
@@ -482,6 +486,7 @@ function turn_path_to_make_church(self){
     let i = util.rand_int(valid_dirs.length);
     return self.move(valid_dirs[i].x, valid_dirs[i].y);
 }
+
 function turn_path_back(self){
     let curr_dist = self.path_to_node[self.me.y][self.me.x];
     if (curr_dist === 0){
@@ -512,6 +517,7 @@ function turn_path_back(self){
     let i = util.rand_int(valid_dirs.length);
     return self.move(valid_dirs[i].x, valid_dirs[i].y);
 }
+
 function turn_mine(self){
     if (self.me.fuel >= 100 || self.me.karbonite >= 20){
         let nearby_units = self.vis_bots;
@@ -554,6 +560,7 @@ function turn_mine(self){
     }
     return self.mine();
 }
+
 function turn_path_to_church(self){
 
     self.log('turn_path_to_church');
@@ -604,6 +611,7 @@ function turn_path_to_church(self){
     let i = util.rand_int(valid_dirs.length);
     return self.move(valid_dirs[i].x, valid_dirs[i].y);
 }
+
 pilgrim.turn = (self) => {
     // this.log(this.state);
     self.vis_bots = self.getVisibleRobots();

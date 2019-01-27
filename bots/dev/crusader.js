@@ -69,6 +69,7 @@ function init_roamer(self){
 	}
 	self.dir_weights = o_dir_cnts;
 }
+
 function init_resourceror(self){
 	let loc_list = [self.me];
 	for (let j = 0; j < self.map_s_y; j++){
@@ -96,6 +97,7 @@ function init_resourceror(self){
 	self.tree_data = util.pilgrim_make_tree(self, loc_list);
 	self.current_node = 0;
 }
+
 crusader.init = (self) => {
 	/** This generates the list of the possible moves that the crusader can make.
 	 * rev_diff_list is the list that is the same as diff_list, but the direction is reversed. */
@@ -144,9 +146,11 @@ function turn_roamer(self){
 	}
 	return self.move(self.diff_list[dir_i].x, self.diff_list[dir_i].y);
 }
+
 function turn_resourceror(self){
 	return; //TODO
 }
+
 crusader.turn = (self) => {
 	self.vis_bots = self.getVisibleRobots();
 	let diff_vis = util.make_array(-1, [self.diff_list.length]);
