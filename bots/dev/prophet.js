@@ -86,7 +86,7 @@ prophet.init = (self) => {
 			self.turtle_radius = (robot.unit === SPECS.CASTLE) ? 4 : 2
 		}
 	}
-	if (robot.creator_id === undefined) {
+	if (self.creator_id === undefined) {
 		self.log("BIG ERROR THERE IS NO CREATOR DLKJFLS:DKFJ:SIDFJ:SLJF:SLDFJI:LSDKFJS:LDKFJDLS:KFJ");
 	}
 	self.next_to_creator = true;
@@ -104,7 +104,7 @@ prophet.turn = (self) => {
 	self.enemies = self.nearest.enemies;
 
 	self.attackable_enemies = []; // contains duplicates
-	self.signaling_enemies.forEach((enemy) => {
+	self.nearest.signaling_enemies.forEach((enemy) => {
 		if (util.between(SPECS.UNITS[SPECS.PROPHET].ATTACK_RADIUS[0], SPECS.UNITS[SPECS.PROPHET].ATTACK_RADIUS[1], util.squared_distance({x:enemy.dx, y:enemy.dy}, {x: 0, y: 0}))) {
 			self.attackable_enemies.push(enemy)
 		}
@@ -147,13 +147,13 @@ function turn_turtle(self) {
 	/*if (util.is_open(self, robot.x+1, robot.y+1) || util.is_open(self, robot.x+1, robot.y-1) ||util.is_open(self, robot.x-1, robot.y+1) ||util.is_open(self, robot.x-1, robot.y-1)){
 		return;
 	}*/
-	let myd = dist_from_creator(self.me);
+	let myd = dist_from_creator(self, self.me);
 	let dir_from_creator = [self.creator.x-self.me.x, self.creator.y-self.me.y];
 	let move_outwards = (myd === 1);
 
 	self.friendlies.forEach((friend) => {
 		let friend_dir = [self.creator.x-friend.x, self.creator.y-friend.y];
-		if (dotproduct(friend_dir, dir_from_creator) > 0 && util.between(1,2,myd - dist_from_creator(friend))) {
+		if (dotproduct(friend_dir, dir_from_creator) > 0 && util.between(1,2,myd - dist_from_creator(self, friend))) {
 			move_outwards = true;
 		}
 	});
@@ -162,11 +162,11 @@ function turn_turtle(self) {
 	if (move_outwards) {
 		let possible_dirs = []
 		for (var d of DIAGONALS) {
-			if (dist_from_creator({x:self.me.x+d[0], y:self.me.y+d[1]}) > myd) {
+			if (dist_from_creator(self, {x:self.me.x+d[0], y:self.me.y+d[1]}) > myd) {
 				possible_dirs.push(d);
 			}
 		}
-		possible_dirs = util.shuffle(possible_dirs);
+		possible_dirs = util.rand_shuffle(possible_dirs);
 		for (var d of possible_dirs) {
 			if (util.can_move(self, d[0], d[1])) {
 				return self.move(d[0], d[1]);
@@ -178,11 +178,11 @@ function turn_turtle(self) {
 	if (Math.random() < 0.2) {
 		let possible_dirs = []
 		for (var d of STRAIGHTS) {
-			if (dist_from_creator({x:self.me.x+d[0], y:self.me.y+d[1]}) === myd) {
+			if (dist_from_creator(self, {x:self.me.x+d[0], y:self.me.y+d[1]}) === myd) {
 				possible_dirs.push(d);
 			}
 		}
-		possible_dirs = util.shuffle(possible_dirs);
+		possible_dirs = util.rand_shuffle(possible_dirs);
 		for (var d of possible_dirs) {
 			if (util.can_move(self, d[0], d[1])) {
 				return self.move(d[0], d[1]);
@@ -247,7 +247,7 @@ function dotproduct(a,b) {
 	return n;
  }
 
-function dist_from_creator(robot) {
+function dist_from_creator(self, robot) {
 	let loc = [robot.x - self.creator.x, robot.y - self.creator.y];
 	return Math.abs(dotproduct(loc, [1, 1])/2)+Math.abs(dotproduct(loc, [1, -1])/2)
 }

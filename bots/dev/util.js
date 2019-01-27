@@ -328,7 +328,7 @@ util.rand_int = (n) => {
 	return Math.floor(n * Math.random());
 };
 
-var rand_shuffle = (array) => {
+util.rand_shuffle = (array) => {
 
 	var currentIndex = array.length;
 	var temporaryValue, randomIndex;
