@@ -17,7 +17,6 @@ const PATHING_BACK = 3;
 const PATHING_TO_CHURCH = 4;
 const MINING = 5;
 const PATHING_TO_RESET = 6;
-const PATHING_TO_SUB_NODE = 7;
 
 
 pilgrim.init = (self) => {
@@ -706,6 +705,8 @@ function turn_path_to_church(self){
     return self.move(valid_dirs[i].x, valid_dirs[i].y);
 }
 pilgrim.turn = (self) => {
+    // self.log((self.me.unit << 5) + (self.state << 2));
+    self.castleTalk((self.me.unit << 5) + (self.state << 1));
     self.vis_bots = self.getVisibleRobots();
     let diff_vis = util.make_array(-1, [self.diff_list.length]);
     let loc_vis = util.make_array(-1, [self.loc_list.length]);

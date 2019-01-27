@@ -24,7 +24,7 @@ castle.init = (self) => {
 	// TODO: tune hyperparameter of 0.6
 	self.target_counts[SPECS.PILGRIM] = Math.ceil( 0.6*  ([].concat.apply([], self.karbonite_map).reduce((total, present) => present ? total + 1 : total)
 														+ [].concat.apply([], self.fuel_map).reduce((total, present) => present ? total + 1 : total)) );
-	self.min_counts[SPECS.PILGRIM] = 0.5*self.target_counts[SPECS.PILGRIM];
+	self.min_counts[SPECS.PILGRIM] = 0.2*self.target_counts[SPECS.PILGRIM];
 	self.near_attacker = undefined;
 
 	self.log(self.target_counts);
@@ -37,6 +37,14 @@ castle.turn = (self) => {
 	if (castle_verbosity > 0) {
 		self.log("Castle health: " + self.me.health + " on turn " + self.me.turn + " with time " + self.me.time);
 	}
+	if (self.last_fuel < self.fuel){
+		self.bank_fuel += 0.1 * (self.fuel - self.last_fuel);
+	}
+	if (self.last_karb < self.karbonite){
+		self.bank_karb += 0.1 * (self.karbonite - self.last_karb);
+	}
+	self.last_fuel = self.fuel;
+	self.last_karb = self.karbonite;
 	// self.log(self.visible_close_to_far[0]);
 	self.vis_bots = self.getVisibleRobots();
 	self.neighbor_vis = util.make_array(-1, [3, 3]);
@@ -62,7 +70,8 @@ castle.turn = (self) => {
 		self.vis_bots.forEach((robot) => {
 			if ((self.isVisible(robot) === false) || (robot.team === self.me.team)) {
 				self.teammates.push(robot);
-				self.unit_counts[parseInt((256 + robot.castle_talk).toString(2).substring(1, 4), 2)]++;
+				// self.unit_counts[parseInt((256 + robot.castle_talk).toString(2).substring(1, 4), 2)]++;
+				self.unit_counts[robot.castle_talk >> 5]++;
 			}
 		});
 		if (castle_verbosity > 0) {
@@ -74,17 +83,22 @@ castle.turn = (self) => {
 	}
 
 	// Set castle state:
-	var new_state = HARASSING; // default
+	var new_state = TURTLING; // default
 
-	if (self.unit_counts[SPECS.PILGRIM] < self.target_counts[SPECS.PILGRIM] && Math.random() < 0.66) {
+	if ((self.unit_counts[SPECS.PILGRIM] < self.target_counts[SPECS.PILGRIM] && Math.random() < 0.66)
+		|| Math.random() < 0.2) {
 		new_state = BUILDING_PILGRIMS;
+	}
+
+	if (Math.random() < 10 / Math.min(25, self.turn)){
+		new_state = HARASSING;
 	}
 
 	if (self.turtle_constructed === false && (Math.random() < 0.5)) {
 		new_state = TURTLING;
 	}
 
-	if (self.unit_counts[SPECS.PILGRIM] < self.min_counts[SPECS.PILGRIM]) {
+	if (self.unit_counts[SPECS.PILGRIM] < self.min_counts[SPECS.PILGRIM] && Math.random() < 0.8) {
 		new_state = BUILDING_PILGRIMS;
 	}
 
@@ -130,7 +144,7 @@ function turn_build_pilgrims(self){
 }
 
 function turn_turtle(self){
-	let try_build = rand_build(self, SPECS.PROPHET, [[-1, -1], [1, -1], [-1, 1], [1, 1]], 0.05);
+	let try_build = rand_build(self, SPECS.PROPHET, [[-1, -1], [1, -1], [-1, 1], [1, 1]], 0.01);
     if (try_build === undefined) {
     	return turn_build_pilgrims(self);
     }

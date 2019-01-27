@@ -71,12 +71,21 @@ util.can_attack = (robot, dx, dy) => {
 util.can_buildUnit = (robot, unit, dx, dy, override_savings=0) => {
 	// let min_karb = Math.min(robot.me.turn, 50);
 	// let min_fuel = Math.min(robot.me.turn * 4, 200);
+    let bank_karb = 0;
+    let bank_fuel = 0;
+    if (robot.me.unit === SPECS.CASTLE){
+        bank_karb = robot.bank_karb;
+        bank_fuel = robot.bank_fuel;
+    }
 	let min_karb = 50;
 	let min_fuel = 200;
 	if (Math.random() < override_savings) {
 		min_karb = 0;
 		min_fuel = 0;
+		bank_karb = 0;
+		bank_fuel = 0;
 	}
+    if (robot.karbonite < bank_karb || robot.fuel < bank_fuel) return false;
 	return (util.on_map(robot, util.add_pos(robot.me, {x: dx, y: dy})) &&
 		robot.karbonite > SPECS.UNITS[unit].CONSTRUCTION_KARBONITE + min_karb&&
 		robot.fuel > SPECS.UNITS[unit].CONSTRUCTION_FUEL + min_fuel&&
