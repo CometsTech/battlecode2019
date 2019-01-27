@@ -37,24 +37,26 @@ castle.turn = (self) => {
 		new_state = BUILDING_WORKERS;
 	}
 	// Note the 0.99 heuristic is to permit not *always* defending... perhaps use another metric
-	// if ((self.nearest_enemies.length > 0) && (self.turtle_constructed === false) && (Math.random() < 0.99)) {
-	// 	new_state = DEFENDING;
-	// }
+	if ((self.nearest_enemies.length > 0) && (self.turtle_constructed === false) && (Math.random() < 0.99)) {
+		new_state = DEFENDING;
+	}
 
 	self.state = new_state;
 
+	self.log(self.state)
+
 	switch (self.state) {
 		case BUILDING_WORKERS:
-			turn_build_workers(self);
+			return turn_build_workers(self);
 			break;
 		case TURTLING:
-			turn_turtle(self);
+			return turn_turtle(self);
 			break;
 		case DEFENDING:
-			turn_defend(self);
+			return turn_defend(self);
 			break;
 		case ATTACKING:
-			turn_attack(self);
+			return turn_attack(self);
 			break;
 	}
 };
