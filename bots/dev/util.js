@@ -377,4 +377,21 @@ util.pilgrim_make_tree = (self, loc_list) => {
 	}
 	return {tree_info: tree_info, voronoi_dist: voronoi_dist, voronoi_id: voronoi_id, child_dists: child_dists};
 };
+
+util.get_tree_dist = (self, p) => {
+	/* Gets the distance associated with the location p.x, p.y to the node p.i*/
+	let id = self.tree_data.voronoi_id[p.y][p.x];
+	if (id === p.i){
+		return self.tree_data.voronoi_dist[p.y][p.x];
+	}
+	else if (id === -1){
+		return max_dist;
+	}
+	else if (id === self.tree_data.tree_info[p.i].parent){
+		return self.tree_data.child_dists[p.y][p.x][self.tree_data.tree_info[p.i].p_index];
+	}
+	else {
+		return max_dist;
+	}
+};
 export default util

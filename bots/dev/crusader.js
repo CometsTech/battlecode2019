@@ -5,7 +5,7 @@ var crusader = {};
 
 const max_dist = 100000;
 
-crusader.init = (self) => {
+function init_roamer(self){
 	/** This generates the list of the possible moves that the crusader can make.
 	 * rev_diff_list is the list that is the same as diff_list, but the direction is reversed. */
 	let diff_list = [];
@@ -68,24 +68,59 @@ crusader.init = (self) => {
 		map_weights[pos.y][pos.x] = 0;
 	}
 	self.dir_weights = o_dir_cnts;
-};
-
-
-crusader.turn = (self) => {
-	//First check for visible enemies
-	var visibleRobots = self.getVisibleRobots();
-	for(var robot of visibleRobots){
-		if(robot.team != self.me.team){
-			self.log("Crusader found enemy");
-			var dx = robot.x - self.me.x, dy = robot.y - self.me.y
-			if(util.can_attack(self, dx, dy)){
-				self.log("Crusader attacking");
-				return self.attack(dx, dy);
+}
+function init_resourceror(self){
+	let loc_list = [self.me];
+	for (let j = 0; j < self.map_s_y; j++){
+		for (let i = 0; i < self.map_s_x; i++){
+			if (self.fuel_map[j][i]){
+				fuel_locs.push({x:i, y:j});
+				if (i !== self.me.x || j !== self.me.y){
+					loc_list.push({x:i, y:j});
+				}
 			}
-			//try to move toward it
 		}
 	}
+	// self.path_fuel = util.bfs(self, fuel_locs);
+	for (let j = 0; j < self.map_s_y; j++){
+		for (let i = 0; i < self.map_s_x; i++){
+			if (self.karbonite_map[j][i]){
+				karb_locs.push({x:i, y:j});
+				if (i !== self.me.x || j !== self.me.y){
+					loc_list.push({x:i, y:j});
+				}
+			}
+		}
 
+	}
+	self.tree_data = util.pilgrim_make_tree(self, loc_list);
+	self.current_node = 0;
+}
+crusader.init = (self) => {
+	/** This generates the list of the possible moves that the crusader can make.
+	 * rev_diff_list is the list that is the same as diff_list, but the direction is reversed. */
+	let inv_diff_list = util.make_array(-1, [5, 5]);
+	let diff_list = [];
+	let rev_diff_list = [];
+	for (let j = -2; j < 3; j++){
+		for (let i = -2; i < 3; i++){
+			if ((i * i + j * j <= 4) && (i !== 0 || j !== 0)){
+				inv_diff_list[j + 2][i + 2] = diff_list.length;
+				diff_list.push({x:i, y:j});
+				rev_diff_list.push({x:-i, y:-j});
+			}
+		}
+	}
+	self.diff_list = diff_list;
+	self.rev_diff_list = rev_diff_list;
+	self.inv_diff_list = inv_diff_list;
+
+	self.is_re_init = false;
+
+	return init_roamer(self);
+};
+
+function turn_roamer(self){
 	//If nothing then move according to plan
 	let dir_weights = self.dir_weights[self.me.y][self.me.x];
 	let rand = Math.random();
@@ -94,8 +129,8 @@ crusader.turn = (self) => {
 		tot += dir_weights[i];
 	}
 	if (tot === 0){
-		// TODO: make knight return to start or something when reaches end
-		return;
+		init_roamer(self);
+		return turn_roamer(self);
 	}
 	rand *= tot;
 	let acc = 0;
@@ -108,6 +143,37 @@ crusader.turn = (self) => {
 		}
 	}
 	return self.move(self.diff_list[dir_i].x, self.diff_list[dir_i].y);
+}
+function turn_resourceror(self){
+	return; //TODO
+}
+crusader.turn = (self) => {
+	self.vis_bots = self.getVisibleRobots();
+	let diff_vis = util.make_array(-1, [self.diff_list.length]);
+	for (let i = 0; i < self.vis_bots.length; i++) {
+		let rob = self.vis_bots[i];
+		if (util.squared_distance(rob, self.me) <= 4 && rob.id !== self.me.id) {
+			diff_vis[self.inv_diff_list[rob.y - self.me.y + 2][rob.x - self.me.x + 2]] = rob.id;
+		}
+	}
+	self.diff_vis = diff_vis;
+
+
+	//First check for visible enemies
+	let visibleRobots = self.vis_bots;
+	for (let i = 0; i < visibleRobots.length; i++){
+		let robot = visibleRobots[i];
+		if (robot.team !== self.me.team){
+			self.log('Crusader found enemy');
+			let dx = robot.x - self.me.x, dy = robot.y - self.me.y
+			if(util.can_attack(self, dx, dy)){
+				self.log("Crusader attacking");
+				return self.attack(dx, dy);
+			}
+		}
+	}
+
+	return turn_roamer(self);
 };
 
 export default crusader;

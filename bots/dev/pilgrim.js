@@ -103,7 +103,7 @@ pilgrim.init = (self) => {
     if (verbosity > 1){self.log('made bfs distances');}
     // this.fuel_tree_data = this.pilgrim_make_tree([this.me].concat(fuel_locs));
     // this.karb_tree_data = this.pilgrim_make_tree([this.me].concat(karb_locs));
-    self.gather_karb = true; // TODO: make some algo for this
+    // self.gather_karb = true; // TODO: make some algo for this
     // if (self.me.turn === 1){
     //     self.gather_karb = true;
     // }
@@ -175,22 +175,6 @@ function turn_reset(self){
     }
     let i = util.rand_int(valid_dirs.length);
     return self.move(valid_dirs[i].x, valid_dirs[i].y);
-}
-function get_tree_dist(self, p){
-    /* Gets the distance associated with the location p.x, p.y to the node p.i*/
-    let id = self.tree_data.voronoi_id[p.y][p.x];
-    if (id === p.i){
-        return self.tree_data.voronoi_dist[p.y][p.x];
-    }
-    else if (id === -1){
-        return max_dist;
-    }
-    else if (id === self.tree_data.tree_info[p.i].parent){
-        return self.tree_data.child_dists[p.y][p.x][self.tree_data.tree_info[p.i].p_index];
-    }
-    else {
-        return max_dist;
-    }
 }
 function turn_path_to_node(self) {
     if (self.current_node < 0) {
@@ -290,7 +274,7 @@ function turn_path_to_node(self) {
     }
 
     // self.log(self.current_node);
-    let curr_dist = get_tree_dist(self, {x: self.me.x, y: self.me.y, i: self.current_node});
+    let curr_dist = util.get_tree_dist(self, {x: self.me.x, y: self.me.y, i: self.current_node});
     if (curr_dist === 0){
         self.log('arrived');
         self.log([self.me.x, self.me.y]);
@@ -309,7 +293,7 @@ function turn_path_to_node(self) {
     for (let i = 0; i < self.diff_list.length; i++) {
         let p = {x: self.me.x + self.diff_list[i].x, y: self.me.y + self.diff_list[i].y, i: self.current_node};
         if (util.on_map(self, p) && self.map[p.y][p.x] &&
-            get_tree_dist(self, p) === curr_dist - 1 && diff_vis[i] <= 0) {
+            util.get_tree_dist(self, p) === curr_dist - 1 && diff_vis[i] <= 0) {
             valid_dirs.push(self.diff_list[i]);
         }
     }
@@ -324,7 +308,7 @@ function turn_path_to_node(self) {
     valid_dirs = [];
     for (let i = 0; i < self.diff_list.length; i++) {
         let p = {x: self.me.x + self.diff_list[i].x, y: self.me.y + self.diff_list[i].y, i: self.current_node};
-        if (util.on_map(self, p) && self.map[p.y][p.x] && get_tree_dist(self, p) === curr_dist && diff_vis[i] <= 0) {
+        if (util.on_map(self, p) && self.map[p.y][p.x] && util.get_tree_dist(self, p) === curr_dist && diff_vis[i] <= 0) {
             valid_dirs.push(self.diff_list[i]);
         }
     }
