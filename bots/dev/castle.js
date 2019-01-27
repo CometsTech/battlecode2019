@@ -1,7 +1,7 @@
 import {BCAbstractRobot, SPECS} from 'battlecode';
 import util from './util.js';
 
-const castle_verbosity = 0;
+const castle_verbosity = 2;
 
 var castle = {};
 
@@ -19,11 +19,12 @@ castle.init = (self) => {
 	self.state = BUILDING_PILGRIMS;
 	self.turtle_constructed = false;
 	self.unit_counts = [0, 0, 0, 0, 0, 0];
+	self.min_counts = [-1, -1, -1, -1, -1, -1];
 	self.target_counts = [-1, -1, -1, -1, -1, -1]; // ADJUST these
 	// TODO: tune hyperparameter of 0.6
 	self.target_counts[SPECS.PILGRIM] = Math.ceil( 0.6*  ([].concat.apply([], self.karbonite_map).reduce((total, present) => present ? total + 1 : total)
 														+ [].concat.apply([], self.fuel_map).reduce((total, present) => present ? total + 1 : total)) );
-	
+	self.min_counts[SPECS.PILGRIM] = 0.5*self.target_counts[SPECS.PILGRIM];
 	self.near_attacker = undefined;
 
 	self.log(self.target_counts);
@@ -77,12 +78,16 @@ castle.turn = (self) => {
 		new_state = BUILDING_PILGRIMS;
 	}
 
-	if (self.turtle_constructed === false) {
-		new_state = TURTLING
+	if (self.turtle_constructed === false && (Math.random() < 0.5)) {
+		new_state = TURTLING;
+	}
+
+	if (self.unit_counts[SPECS.PILGRIM] < self.min_counts[SPECS.PILGRIM]) {
+		new_state = BUILDING_PILGRIMS;
 	}
 
 	// Note the 0.99 heuristic is to permit not *always* defending... perhaps use another metric
-	if ((self.enemies.length > 0) && (self.turtle_constructed === false) && (Math.random() < 0.99)) {
+	if ((self.enemies.length > 0) && (self.turtle_constructed === false)) {
 		new_state = DEFENDING;
 	}
 
@@ -113,7 +118,7 @@ castle.turn = (self) => {
 };
 
 function turn_build_pilgrims(self){
-    let try_build = rand_build(self, SPECS.PILGRIM, self.availableDirections);
+    let try_build = rand_build(self, SPECS.PILGRIM, self.availableDirections, 1/(self.turn*self.turn));
     if (try_build === undefined) {
     	return; // TODO add functionality
     }
@@ -123,9 +128,9 @@ function turn_build_pilgrims(self){
 }
 
 function turn_turtle(self){
-	let try_build = rand_build(self, SPECS.PROPHET, [[-1, -1], [1, -1], [-1, 1], [1, 1]], 1);
+	let try_build = rand_build(self, SPECS.PROPHET, [[-1, -1], [1, -1], [-1, 1], [1, 1]], 0.05);
     if (try_build === undefined) {
-    	return;
+    	return turn_build_pilgrims(self);
     }
     else {
     	return try_build;
@@ -177,6 +182,7 @@ function turn_defend(self){
 		}
 		// If unit isn't close enough to hit with a powerful unit, try just shooting it with castle
 		if (util.can_attack(self, self.near_attacker.dx, self.near_attacker.dy)) {
+			self.log("Castle attacking attacker!")
 			return self.attack(self.near_attacker.dx, self.near_attacker.dy);
 		}
 		// If unit hasn't entered attack range, but in vision range, build preacher and send after

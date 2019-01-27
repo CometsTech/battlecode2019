@@ -317,6 +317,10 @@ util.closest_direction = (dx, dy) => {
 	return {dx: best_dir[0], dy: best_dir[1]}
 };
 
+util.gamma_prob = (max, num) => {
+	return Math.pow(num/(max-1), max-1)*Math.exp(max-1-num);
+}
+
 util.rand_int = (n) => {
 	if (n === 0){
 		throw "rand_int n should be greater than 0";
