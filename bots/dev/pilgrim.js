@@ -18,49 +18,9 @@ const PATHING_TO_CHURCH = 4;
 const MINING = 5;
 const PATHING_TO_RESET = 6;
 
-class PriorityQueue{
-    /** A min heap by its element's val property
-     * This is a simple binary heap. Could be improved by using a better data structure like a fibbonacci heap.*/
-    constructor(){
-        this.a = [0]; // element at index 0 doesn't matter
-    }
-    push(e){
-        let i = this.a.length;
-        this.a.push(e); // kinda redundant
-        while (i > 1 && this.a[i >> 1].val > e.val){
-            this.a[i] = this.a[i >> 1];
-            i >>= 1; // lol
-        }
-        this.a[i] = e;
-    }
-    pop(){
-        let o = this.a[1];
-        let e = this.a.pop(); // this is the element that is moving down the tree
-        if (this.a.length === 1) {return o;}
-        // maybe replace the pop with something more efficient
-        let i = 1;
-        while (1){
-            if ((i << 1) < this.a.length && this.a[i << 1].val < e.val){
-                this.a[i] = this.a[i << 1];
-                i = i << 1;
-            }
-            else if ((i << 1) + 1 < this.a.length && this.a[(i << 1) + 1].val < e.val){
-                this.a[i] = this.a[(i << 1) + 1];
-                i = (i << 1) + 1;
-            }
-            else{
-                break;
-            }
-        }
-        this.a[i] = e;
-        return o;
-    }
-    is_empty(){
-        return this.a.length <= 1;
-    }
-}
-function pilgrim_make_tree(self, loc_list){
-    /** Calculates the voronoi tree and pathing data based on the location list passed in.
+
+/*function pilgrim_make_tree(self, loc_list){
+    /!** Calculates the voronoi tree and pathing data based on the location list passed in.
      * This is for worker pathing to disperse workers effectively.
      * Assumes root is at location 0 in list.
      * @returns an object containing tree_info, voronoi_id, voronoi_dist, and child_dists
@@ -73,9 +33,9 @@ function pilgrim_make_tree(self, loc_list){
      *
      * voronoi_id is a 2d array, which, for each location gives the index of the nearest node
      * voronoi_dist is a 2d array that gives the distance to the nearest node
-     * child_dists gives, for each child of the nearest node, the distance to that child*/
-    /* The following bit calculates the voronoi cells by BFS'ing outwards from each resource.
-    * It calculates voronoi_id and voronoi_dist, along with the neighbor list for calculating the node graph*/
+     * child_dists gives, for each child of the nearest node, the distance to that child*!/
+    /!* The following bit calculates the voronoi cells by BFS'ing outwards from each resource.
+    * It calculates voronoi_id and voronoi_dist, along with the neighbor list for calculating the node graph*!/
     let path_q = [];
     let voronoi_dist = util.make_array(max_dist, [self.map_s_y, self.map_s_x]); // the distance to nearest resource
     let voronoi_id = util.make_array( -1, [self.map_s_y, self.map_s_x]); // the index of the resource its near
@@ -123,7 +83,7 @@ function pilgrim_make_tree(self, loc_list){
         }
     }
     // this.log(all_pairs);
-    /* processing the pair list into a better format*/
+    /!* processing the pair list into a better format*!/
     let neighbor_list = [];
     for (let i = 0; i < loc_list.length; i++){
         neighbor_list.push([]);
@@ -137,7 +97,7 @@ function pilgrim_make_tree(self, loc_list){
     for (let i = 0; i < loc_list.length; i++){
         tree_info.push({parent:-1, p_index:-1, children: [], node_weight: 1, x: loc_list[i].x, y: loc_list[i].y});
     }
-    /* making the node tree by dijkstra*/
+    /!* making the node tree by dijkstra*!/
     let node_dists = util.make_array(max_dist, [loc_list.length]);
     node_dists[0] = 0;
     let q = new PriorityQueue();
@@ -165,7 +125,7 @@ function pilgrim_make_tree(self, loc_list){
         // TODO: fix when map is cut into separate pieces by walls.
         tree_info[node_info.parent].children.push(i);
     }
-    /* This next bit sets the node_weight */
+    /!* This next bit sets the node_weight *!/
     let covered = util.make_array(false, loc_list.length);
     let weight_q = [];
     for (let i = 0; i < loc_list.length; i++){
@@ -183,7 +143,7 @@ function pilgrim_make_tree(self, loc_list){
             covered[tree_info[i].parent] = true;
         }
     }
-    /* sets child_dists.*/
+    /!* sets child_dists.*!/
     let child_dists = util.make_array([], [self.map_s_y, self.map_s_x]); // the -1 is unimportant
     for (let y = 0; y < self.map_s_y; y++){
         for (let x = 0; x < self.map_s_x; x++){
@@ -215,7 +175,7 @@ function pilgrim_make_tree(self, loc_list){
         }
     }
     return {tree_info: tree_info, voronoi_dist: voronoi_dist, voronoi_id: voronoi_id, child_dists: child_dists};
-}
+}*/
 pilgrim.init = (self) => {
     /* State variables.*/
     self.state = 0;
@@ -313,7 +273,7 @@ pilgrim.init = (self) => {
     //     self.gather_karb = Math.random() * (fuel_weight + karb_weight) < fuel_weight;
     // }
     // return;
-    self.tree_data = pilgrim_make_tree(self, loc_list);
+    self.tree_data = util.pilgrim_make_tree(self, loc_list);
     for (let i = 0; i < self.tree_data.tree_info.length; i++){
         let pos = self.tree_data.tree_info[i];
         self.tree_data.tree_info[i].is_karb = self.karbonite_map[pos.y][pos.x];
