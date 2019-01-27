@@ -111,12 +111,11 @@ function turn_turtle(self) {
 		if(robot.unit == 0 && robot.team == self.me.team){
 			
 			//Making sure first layer of turtle is complete
-			if (util.is_open(self, robot.x+1, robot.y+1) || util.is_open(self, robot.x+1, robot.y-1) ||util.is_open(self, robot.x-1, robot.y+1) ||util.is_open(self, robot.x-1, robot.y-1)){
+			/*if (util.is_open(self, robot.x+1, robot.y+1) || util.is_open(self, robot.x+1, robot.y-1) ||util.is_open(self, robot.x-1, robot.y+1) ||util.is_open(self, robot.x-1, robot.y-1)){
 				return;
-			}
+			}*/
 
 			//Calculate which direction to move out diagonally
-
 			var dx = robot.x - self.me.x, dy = robot.y - self.me.y;
 			var x_dir = -Math.sign(dx)
 			var y_dir = -Math.sign(dy)
@@ -130,17 +129,23 @@ function turn_turtle(self) {
 				else{
 					//Calculate possible directions can move in other than directly diagonal from castle
 					let dirs = []
-					for (var i = -1; i <= 1; i = i + 2) {
-						for (var k = -1; k <= 1; k = k + 2) {
-							if (dotproduct([i, k], [x_dir, y_dir]) === 0){
-								dirs.push([i, k]);
-							}
-						}
+					if (dotproduct([1, 1], [x_dir, y_dir]) === 0){
+						dirs.push([1, 1]);
 					}
+					if (dotproduct([1, -1], [x_dir, y_dir]) === 0){
+						dirs.push([1, -1]);
+					}
+					if (dotproduct([-1, 1], [x_dir, y_dir]) === 0){
+						dirs.push([-1, 1]);
+					}
+					if (dotproduct([-1, -1], [x_dir, y_dir]) === 0){
+						dirs.push([-1, -1]);
+					}
+
 					//Move in one of those directions
 					for (var i in dirs){
-						if (util.can_move(self, i[0], i[1])){
-							return self.move(i[0], i[1]);
+						if (util.can_move(self, dirs[i][0], dirs[i][1])){
+							return self.move(dirs[i][0], dirs[i][1]);
 						}
 					}	
 				}
@@ -168,18 +173,6 @@ function dotproduct(a,b) {
 	for (var i = 0; i < lim; i++) n += a[i] * b[i];
 	return n;
  }
-
-function distance(a, b) {
-  var farthest = 0
-  var dimensions = Math.max(a.length, b.length)
-  for (var i = 0; i < dimensions; i++) {
-    var distance = Math.abs((b[i] || 0) - (a[i] || 0))
-    if (distance > farthest) {
-      farthest = distance
-    }
-  }
-  return farthest
-}
 
 
 function turn_not_turtling(self) {

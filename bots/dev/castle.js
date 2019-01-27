@@ -105,7 +105,7 @@ function turn_build_pilgrims(self){
 }
 
 function turn_turtle(self){
-	let try_build = rand_build(self, SPECS.PROPHET, [[1, 1], [1, -1], [-1, 1], [-1, -1]], 1);
+	let try_build = rand_build(self, SPECS.PROPHET, [[-1, -1], [1, -1], [-1, 1], [1, 1]], 1);
     if (try_build === undefined) {
     	return; // TODO add functionality
     }
