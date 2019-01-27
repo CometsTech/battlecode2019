@@ -9,7 +9,8 @@ var castle = {};
 const BUILDING_PILGRIMS = 0;
 const TURTLING = 1;
 const DEFENDING = 2;
-const ATTACKING = 3;
+const HARASSING = 3;
+const CHARGING = 4;
 
 castle.init = (self) => {
 	self.log("Start of game");
@@ -60,7 +61,7 @@ castle.turn = (self) => {
 	}
 
 	// Set castle state:
-	var new_state = ATTACKING; // default
+	var new_state = HARASSING; // default
 
 	if (self.unit_counts[SPECS.PILGRIM] < self.target_counts[SPECS.PILGRIM] && Math.random() < 0.66) {
 		new_state = BUILDING_PILGRIMS;
@@ -71,7 +72,7 @@ castle.turn = (self) => {
 		new_state = DEFENDING;
 	}
 
-	if (self.me.turn < 3 || true) {
+	if (self.me.turn < 3) {
 		new_state = BUILDING_PILGRIMS;
 	}
 
@@ -91,8 +92,8 @@ castle.turn = (self) => {
 		case DEFENDING:
 			return turn_defend(self);
 			break;
-		case ATTACKING:
-			return turn_attack(self);
+		case HARASSING:
+			return turn_harass(self);
 			break;
 	}
 };
@@ -185,7 +186,7 @@ function turn_defend(self){
 	return turn_attack(self);
 }
 
-function turn_attack(self){
+function turn_harass(self){
 	// TODO FIX @AADITYA
 	var to_build = SPECS.PREACHER;
 	if(self.me.turn < 40 || true){
