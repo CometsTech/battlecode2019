@@ -68,15 +68,28 @@ util.can_attack = (robot, dx, dy) => {
 	return false;
 };
 
-util.can_buildUnit = (robot, unit, dx, dy) => {
+util.can_buildUnit = (robot, unit, dx, dy, override_savings=0) => {
 	// let min_karb = Math.min(robot.me.turn, 50);
 	// let min_fuel = Math.min(robot.me.turn * 4, 200);
+    let bank_karb = 0;
+    let bank_fuel = 0;
+    if (robot.me.unit === SPECS.CASTLE){
+        bank_karb = robot.bank_karb;
+        bank_fuel = robot.bank_fuel;
+    }
 	let min_karb = 50;
 	let min_fuel = 200;
-	return (util.is_open(robot, robot.me.x+dx, robot.me.y+dy) &&
+	if (Math.random() < override_savings) {
+		min_karb = 0;
+		min_fuel = 0;
+		bank_karb = 0;
+		bank_fuel = 0;
+	}
+    if (robot.karbonite < bank_karb || robot.fuel < bank_fuel) return false;
+	return (util.on_map(robot, util.add_pos(robot.me, {x: dx, y: dy})) &&
 		robot.karbonite > SPECS.UNITS[unit].CONSTRUCTION_KARBONITE + min_karb&&
 		robot.fuel > SPECS.UNITS[unit].CONSTRUCTION_FUEL + min_fuel&&
-		robot.map[robot.me.x+dx][robot.me.y+dy] && dx*dx + dy*dy <= 2);
+		robot.map[robot.me.y+dy][robot.me.x+dx] && dx*dx + dy*dy <= 2 && robot.neighbor_vis[dy + 1][dx + 1] < 0);
 };
 
 util.can_mine = (robot) => {
@@ -93,8 +106,7 @@ util.can_move = (robot, dx, dy) => {
 };
 
 util.is_open = (robot, x, y) => {
-	if(x < 0 || y < 0 || x >= robot.map.length || y >= robot.map.length) return false;
-	if(robot.map[y][x] && robot.getVisibleRobotMap()[y][x] <= 0) return true;
+	if(util.on_map(robot, {x: x, y: y}) && robot.map[y][x] && robot.getVisibleRobotMap()[y][x] <= 0) return true;
 	return false;
 };
 
@@ -164,6 +176,35 @@ util.bfs = (robot, pos_list) => {
 	return pathing_map;
 };
 
+util.get_is_pos = (p) => {
+	return a => a.x === p.x && a.y === p.y;
+};
+
+util.bfs_limited = (robot, pos_list, is_target) => {
+	/** like bfs, but if is_target comes out to true, then it'll stop the bfs there. There should be only one target*/
+	let pathing_map = util.make_array(max_dist, [robot.map_s_y, robot.map_s_x]);
+	let path_q = []; // apparently javascript copy is weird
+	for (let i = 0; i < pos_list.length; i++){
+		path_q.push(pos_list[i]);
+		pathing_map[pos_list[i].y][pos_list[i].x] = 0;
+	}
+	while (path_q.length > 0){
+		let pos = path_q.shift();
+		if (is_target(pos)){
+			return pathing_map;
+		}
+		for (let i = 0; i < robot.diff_list.length; i++) {
+			let p = util.add_pos(pos, robot.diff_list[i]);
+			let p_d = pathing_map[pos.y][pos.x] + 1;
+			if (util.on_map(robot, p) && robot.map[p.y][p.x] && p_d < pathing_map[p.y][p.x]) {
+				pathing_map[p.y][p.x] = p_d;
+				path_q.push(p);
+			}
+		}
+	}
+	return pathing_map;
+};
+
 util.squared_distance = (a, b) => {
 	return (a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y);
 };
@@ -192,8 +233,10 @@ util.close_to_far = (mindist, maxdist) => {
 	return retval;
 };
 
-util.nearest_units = (robot, close_to_far) => {
-	let map = robot.getVisibleRobotMap();
+util.nearest_units = (robot, close_to_far, map=undefined) => {
+	if (map === undefined) {
+		map = robot.getVisibleRobotMap();
+	}
 	let retval = {friendlies: [], enemies: [], nearest_enemy_attacker: undefined, signaling_enemies: []};
 	close_to_far.forEach( (dir) => {
 		let abs = {x: robot.me.x + dir.x, y: robot.me.y+dir.y};
@@ -205,8 +248,10 @@ util.nearest_units = (robot, close_to_far) => {
 			if (looking_at.team !== robot.me.team) {
 				retval.enemies.push({dx: dir.x, dy: dir.y, robot: looking_at});
 				if (retval.nearest_enemy_attacker === undefined) {
-					if ((robot.me.unit === SPECS.CASTLE) || (robot.me.unit === SPECS.PREACHER) || (robot.me.unit === SPECS.CRUSADER) || (robot.me.unit === SPECS.PROPHET)) {
+					if ((looking_at.unit === SPECS.CASTLE) || (looking_at.unit === SPECS.PREACHER) || (looking_at.unit === SPECS.CRUSADER) || (looking_at.unit === SPECS.PROPHET)) {
 						retval.nearest_enemy_attacker = {dx: dir.x, dy: dir.y, robot: looking_at};
+						robot.log("Found nearest enemy attacker!");
+						robot.log(retval.nearest_enemy_attacker);
 					}
 				}
 				if (robot.isRadioing(looking_at)) {
@@ -221,11 +266,102 @@ util.nearest_units = (robot, close_to_far) => {
 	return retval;
 };
 
+util.best_AOE_target = (robot, close_to_far, map=undefined, loc=undefined) => {
+	if (map === undefined) {
+		map = robot.getVisibleRobotMap();
+	}
+	if (loc === undefined) {
+		loc = {x: robot.me.x, y: robot.me.y};
+	}
+	let retval = {targets: [], best_target: undefined};
+	let max_damage = 0;
+	close_to_far.forEach( (dir) => {
+		let damage = 0;
+		let abs = {x: loc.x + dir.x, y: loc.y+dir.y};
+		let abs_damage = 20;
+		if ((abs.x < 0) || (abs.x >= robot.map_s_x) || (abs.y < 0) || (abs.y >= robot.map_s_x)) {
+			return;
+		}
+		if (map[abs.y][abs.x] > 0) {
+			let looking_at = robot.getRobot(map[abs.y][abs.x]);
+			if (looking_at.unit === SPECS.PROPHET) {
+				abs_damage += 10;
+			}
+			if (looking_at.unit === SPECS.CASTLE || looking_at.unit === SPECS.CHURCH) {
+				abs_damage += 5;
+			}
+			damage = (looking_at.team !== robot.me.team) ? damage+abs_damage : damage - abs_damage;
+		}
+		for (var d of DIRECTIONS)  {
+			abs = {x: loc.x + dir.x + d[0], y: loc.y+dir.y + d[1]};
+			if ((abs.x < 0) || (abs.x >= robot.map_s_x) || (abs.y < 0) || (abs.y >= robot.map_s_x)) {
+				continue;
+			}
+			abs_damage = 20;
+			if (map[abs.y][abs.x] > 0) {
+				let looking_at = robot.getRobot(map[abs.y][abs.x]);
+				if (looking_at.unit === SPECS.PROPHET) {
+					abs_damage += 10;
+				}
+				if (looking_at.unit === SPECS.CASTLE || looking_at.unit === SPECS.CHURCH) {
+					abs_damage += 5;
+				}
+				damage = (looking_at.team !== robot.me.team) ? damage+abs_damage : damage - abs_damage;
+			}
+		}
+		retval.targets.push({dx: dir.x, dy: dir.y, damage: damage});
+		if (damage > max_damage) {
+			retval.best_target = {dx: dir.x, dy: dir.y};
+			max_damage = damage;
+		}
+	} );
+	return retval;
+};
+
+util.closest_direction = (dx, dy) => {
+	var best_dir = [0, 0];
+	let max = 0;
+	let cur = 0;
+	for (var dir of DIRECTIONS) {
+		cur = (dir[0]*dx + dir[1]*dy)/Math.sqrt(dir[0]*dir[0]+dir[1]*dir[1]);
+		if (cur > max) {
+			max = cur;
+			best_dir = dir;
+		}
+	}
+	return {dx: best_dir[0], dy: best_dir[1]}
+};
+
+util.gamma_prob = (max, num) => {
+	return Math.pow(num/(max-1), max-1)*Math.exp(max-1-num);
+}
+
 util.rand_int = (n) => {
 	if (n === 0){
 		throw "rand_int n should be greater than 0";
 	}
 	return Math.floor(n * Math.random());
+};
+
+util.rand_shuffle = (array) => {
+
+	var currentIndex = array.length;
+	var temporaryValue, randomIndex;
+
+	// While there remain elements to shuffle...
+	while (0 !== currentIndex) {
+		// Pick a remaining element...
+		randomIndex = Math.floor(Math.random() * currentIndex);
+		currentIndex -= 1;
+
+		// And swap it with the current element.
+		temporaryValue = array[currentIndex];
+		array[currentIndex] = array[randomIndex];
+		array[randomIndex] = temporaryValue;
+	}
+
+	return array;
+
 };
 
 util.rand_weight = (a) => {
@@ -400,6 +536,10 @@ util.pilgrim_make_tree = (self, loc_list) => {
 	return {tree_info: tree_info, voronoi_dist: voronoi_dist, voronoi_id: voronoi_id, child_dists: child_dists};
 };
 
+util.pos_eq = (a, b) => {
+	return a.x === b.x && a.y === b.y;
+}
+
 util.get_tree_dist = (self, p) => {
 	/* Gets the distance associated with the location p.x, p.y to the node p.i*/
 	let id = self.tree_data.voronoi_id[p.y][p.x];
@@ -458,7 +598,12 @@ function astar_heuristic(x1, y1, x2, y2){
 	return (x2-x1)*(x2-x1) + (y2-y1)*(y2-y1);
 }
 
-util.astar = (self, x1, y1, x2, y2, memoPaths) => {
+util.astar = (self, x1, y1, x2, y2, memoPaths, possibleMoves) => {
+	/* (x1, y1) current coordinates
+	 * (x2, y2) destination coordinates
+	 * memoPaths dictionary of previously computed moves
+	 * possibleMoves list of valid moves [dx, dy]
+	*/
 	var hashed = util.hash_coords(x1, y1, x2, y2);
 	if (memoPaths.hasOwnProperty(hashed)) {
 		return memoPaths[hashed].move;
@@ -473,20 +618,21 @@ util.astar = (self, x1, y1, x2, y2, memoPaths) => {
 		var node = q.pop();
 		if (util.hash_coord(q.loc[0], q.loc[1]) === util.hash_coord(x2, y2)) {
 			while (node.prev != -1) {
-				memoPaths[node.hash] = node.prev.move;
+				memoPaths[util.hash_coord(...node.prev.loc)] = [node.loc[0] - node.prev.loc[0], node.loc[1] - node.prev.loc[1]];
 				node = node.prev;
 			}
 		}
 
-		for (var l of possible_moves(SPECS.UNIT[self.me.unit].SPEED)){
+		//for (var l of possible_moves(SPECS.UNIT[self.me.unit].SPEED)){
+		for (var l of possibleMoves){
 			var hash = util.hash_coord(loc);
 			if (visited.hasOwnProperty(hashed)) continue;
 
 			visited[hash] = true;
 
-			var newx = self.me.x + l[0], newy = self.me.y + l[1];
+			var dx = l[0], dy = l[1], newx = self.me.x + dx, newy = self.me.y + dy;
 			if(!util.is_passable(newx, newy)) continue;
-			var newNode = {loc:[newx, newy] , depth: node.depth+1, val: node.depth+1 + astar_heuristic(node.loc[0], node.loc[1], x2, y2), prev: node};
+			var newNode = {loc:[newx, newy] , depth: node.depth+1, val: node.val + dx*dx + dy*dy + l[1]*l[1] + astar_heuristic(node.loc[0], node.loc[1], x2, y2), prev: node};
 			q.push(newNode);
 		}
 	}

@@ -1,13 +1,16 @@
 import {BCAbstractRobot, SPECS} from 'battlecode';
 import util from './util.js';
 
+const castle_verbosity = 2;
+
 var castle = {};
 
 // states
 const BUILDING_PILGRIMS = 0;
 const TURTLING = 1;
 const DEFENDING = 2;
-const ATTACKING = 3;
+const HARASSING = 3;
+const CHARGING = 4;
 
 castle.init = (self) => {
 	self.log("Start of game");
@@ -16,18 +19,50 @@ castle.init = (self) => {
 	self.state = BUILDING_PILGRIMS;
 	self.turtle_constructed = false;
 	self.unit_counts = [0, 0, 0, 0, 0, 0];
+	self.min_counts = [-1, -1, -1, -1, -1, -1];
 	self.target_counts = [-1, -1, -1, -1, -1, -1]; // ADJUST these
 	// TODO: tune hyperparameter of 0.6
 	self.target_counts[SPECS.PILGRIM] = Math.ceil( 0.6*  ([].concat.apply([], self.karbonite_map).reduce((total, present) => present ? total + 1 : total)
 														+ [].concat.apply([], self.fuel_map).reduce((total, present) => present ? total + 1 : total)) );
+	self.min_counts[SPECS.PILGRIM] = 0.2*self.target_counts[SPECS.PILGRIM];
+	self.near_attacker = undefined;
+
 	self.log(self.target_counts);
+
+	self.turtle_radius = 4;
+	self.bank_karb = 40;
+	self.bank_fuel = 160;
+	self.last_fuel = 0;
+	self.last_karb = 0;
 };
 
 // TODO: degenerate cases where u should insta attack enemy castle
 castle.turn = (self) => {
-	self.log("Castle health: " + self.me.health + " on turn " + self.me.turn + " with time " + self.me.time);
+	if (castle_verbosity > 0) {
+		self.log("Castle health: " + self.me.health + " on turn " + self.me.turn + " with time " + self.me.time);
+	}
+	// if (self.last_fuel < self.fuel){
+	// 	self.bank_fuel += 0.1 * (self.fuel - self.last_fuel);
+	// }
+	// if (self.last_karb < self.karbonite){
+	// 	self.bank_karb += 0.1 * (self.karbonite - self.last_karb);
+	// }
+	self.bank_karb += 1;
+	self.bank_fuel += 5;
+	self.last_fuel = self.fuel;
+	self.last_karb = self.karbonite;
 	// self.log(self.visible_close_to_far[0]);
-
+	self.vis_bots = self.getVisibleRobots();
+	self.neighbor_vis = util.make_array(-1, [3, 3]);
+	self.neighbor_vis[1][1] = self.me.id;
+	for (let i = 0; i < self.vis_bots.length; i++){
+		let bot = self.vis_bots[i];
+		// self.log(bot);
+		if (util.squared_distance(bot, self.me) < 3){
+			self.neighbor_vis[bot.y - self.me.y + 1][bot.x - self.me.x + 1] = bot.id;
+		}
+	}
+	// self.log(self.neighbor_vis);
 	self.availableDirections = util.find_open_adjacents(self);
 	self.teammates = []; // can be out of vision range
 	self.nearest = util.nearest_units(self, self.visible_close_to_far);
@@ -38,27 +73,43 @@ castle.turn = (self) => {
 	// TODO only get unit counts if time permits
 	if (self.me.time > 10) {
 		self.unit_counts = [0, 0, 0, 0, 0, 0];
-		self.getVisibleRobots().forEach( (robot) => {
+		self.vis_bots.forEach((robot) => {
 			if ((self.isVisible(robot) === false) || (robot.team === self.me.team)) {
 				self.teammates.push(robot);
-				self.unit_counts[parseInt((256+robot.castle_talk).toString(2).substring(1, 4), 2)]++;
+				// self.unit_counts[parseInt((256 + robot.castle_talk).toString(2).substring(1, 4), 2)]++;
+				self.unit_counts[robot.castle_talk >> 5]++;
 			}
 		});
-		self.log(self.unit_counts);
+		if (castle_verbosity > 0) {
+			self.log(self.unit_counts);
+		}
 	}
 	else {
 		self.log("RUNNING LOW ON TIME YIKE")
 	}
 
 	// Set castle state:
-	var new_state = ATTACKING; // default
+	var new_state = TURTLING; // default
 
-	if (self.unit_counts[SPECS.PILGRIM] < self.target_counts[SPECS.PILGRIM]) {
+	if ((self.unit_counts[SPECS.PILGRIM] < self.target_counts[SPECS.PILGRIM] && Math.random() < 0.66)
+		|| Math.random() < 0.2) {
+		new_state = BUILDING_PILGRIMS;
+	}
+
+	// if (Math.random() < 10 / Math.min(25, self.turn)){
+	// 	new_state = HARASSING;
+	// }
+
+	if (self.turn > 20 && self.turtle_constructed === false && (Math.random() < 0.5)) {
+		new_state = TURTLING;
+	}
+
+	if (self.unit_counts[SPECS.PILGRIM] < self.min_counts[SPECS.PILGRIM] && Math.random() < 0.8) {
 		new_state = BUILDING_PILGRIMS;
 	}
 
 	// Note the 0.99 heuristic is to permit not *always* defending... perhaps use another metric
-	if ((self.enemies.length > 0) && (self.turtle_constructed === false) && (Math.random() < 0.99)) {
+	if ((self.enemies.length > 0) && (self.turtle_constructed === false)) {
 		new_state = DEFENDING;
 	}
 
@@ -68,7 +119,9 @@ castle.turn = (self) => {
 
 	self.state = new_state;
 
-	self.log("Castle state: " + self.state);
+	if (castle_verbosity > 0){
+		self.log("Castle state: " + self.state);
+	}
 
 	switch (self.state) {
 		case BUILDING_PILGRIMS:
@@ -80,35 +133,109 @@ castle.turn = (self) => {
 		case DEFENDING:
 			return turn_defend(self);
 			break;
-		case ATTACKING:
-			return turn_attack(self);
+		case HARASSING:
+			return turn_harass(self);
 			break;
 	}
 };
 
 function turn_build_pilgrims(self){
-    return rand_build(self, SPECS.PILGRIM, self.availableDirections);
+    let try_build = rand_build(self, SPECS.PILGRIM, self.availableDirections, 1/(self.turn*self.turn));
+    if (try_build === undefined) {
+    	return; // TODO add functionality
+    }
+    else {
+    	return try_build;
+    }
 }
 
-function turn_turtle(self){
-	var d = [-1, 1];
-	while (false) {
-		let dx = d[Math.round(Math.random())];
-		let dy = d[Math.round(Math.random())];
-		if (util.can_buildUnit(self, SPECS.PROPHET, dx, dy)){
-			return self.buildUnit(SPECS.PROPHET, dx, dy);
-		}
+function turn_turtle(self, force=false){
+	let unit_to_build = SPECS.PROPHET;
+	if (Math.random() < 0.2 && (force === false)) {
+		let unit_to_build = SPECS.PREACHER;
 	}
+	let try_build = rand_build(self, unit_to_build, [[-1, -1], [1, -1], [-1, 1], [1, 1]], 0.01);
+    if (try_build === undefined) {
+    	if (force) {
+    		return;
+    	} else {
+    		turn_turtle(self, true);
+    	}
+    }
+    else {
+    	return try_build;
+    }
 }
 
 function turn_defend(self){
-	// if (self.nearest.nearest_enemy_attacker === undefined) {
+	// TODO broadcast relevant signal to turtle about killing radio-ing enemies
+	if (self.nearest.nearest_enemy_attacker === undefined) {
+		let near_worker = self.enemies[0];
+		self.log("I see a worker!");
+		self.log(near_worker);
+		if (util.can_attack(self, near_worker.dx, near_worker.dy)) {
+			return self.attack(near_worker.dx, near_worker.dy);
+		}
+		let make_dir = util.closest_direction(near_worker.dx, near_worker.dy);
+		self.log(make_dir);
+		// TODO SET SIGNAL TO TELL CRUSADER TO MOVE IN MAKE DIR AS WELL (to bring it closer to the worker)
+		if (util.can_buildUnit(self, SPECS.CRUSADER, make_dir.dx, make_dir.dy, 0.5)) {
+			return self.buildUnit(SPECS.CRUSADER, make_dir.dx, make_dir.dy);
+		}
+		// if the optimal spot is taken, just build randomly
+		// TOOD make this smarter
+		let try_build = rand_build(self, SPECS.CRUSADER, self.availableDirections, 0.4);
+		if (try_build ===  undefined) {
+			return;
+		}
+		else {
+			return try_build;
+		}
+	}
+	else {
+		self.near_attacker = self.nearest.nearest_enemy_attacker;
+		self.log("Must defend myself!");
+		self.log(self.near_attacker);
+		let make_dir = util.closest_direction(self.near_attacker.dx, self.near_attacker.dy);
+		self.log(make_dir);
+		let sqd = util.squared_distance({x: self.near_attacker.dx, y: self.near_attacker.dy}, {x: make_dir.dx, y: make_dir.dy});
+		// If close enough, spawning a preacher/crusader is good defense
+		// TODO SET OVERRIDE SIGNAL TO TELL unit to attack regardless
+		if (sqd <= 16) {
+			self.log("Trying to make unit to defend me.")
+			if (util.can_buildUnit(self, SPECS.PREACHER, make_dir.dx, make_dir.dy, 1)) {
+				return self.buildUnit(SPECS.PREACHER, make_dir.dx, make_dir.dy);
+			}
+			if (util.can_buildUnit(self, SPECS.CRUSADER, make_dir.dx, make_dir.dy, 1)) {
+				return self.buildUnit(SPECS.CRUSADER, make_dir.dx, make_dir.dy);
+			}
+		}
+		// If unit isn't close enough to hit with a powerful unit, try just shooting it with castle
+		if (util.can_attack(self, self.near_attacker.dx, self.near_attacker.dy)) {
+			self.log("Castle attacking attacker!")
+			return self.attack(self.near_attacker.dx, self.near_attacker.dy);
+		}
+		// If unit hasn't entered attack range, but in vision range, build preacher and send after
+		// TODO Check if the unit can actually reach attack range
+		// TODO SET OVERRIDE SIGNAL TO TELL unit to move more
+		else {
+			if (util.can_buildUnit(self, SPECS.PREACHER, make_dir.dx, make_dir.dy)) {
+				return self.buildUnit(SPECS.PREACHER, make_dir.dx, make_dir.dy);
+			}
+			let try_build = rand_build(self, SPECS.PREACHER, self.availableDirections, 0.5);
+			if (try_build === undefined) {
+				return;
+			}
+			else {
+				return try_build;
+			}
+		}
 
-	// }
+	}
 	return turn_attack(self);
 }
 
-function turn_attack(self){
+function turn_harass(self){
 	// TODO FIX @AADITYA
 	var to_build = SPECS.PREACHER;
 	if(self.me.turn < 40 || true){
@@ -117,18 +244,18 @@ function turn_attack(self){
 	return rand_build(self, to_build, self.availableDirections);
 }
 
-function rand_build(self, unit, dirs){
+function rand_build(self, unit, dirs, override_savings=0){
 	let ok_dirs = [];
 	for (let i = 0; i < dirs.length; i++){
-		if (util.can_buildUnit(self, unit, dirs[i][0], dirs[i][1])){
+		if (util.can_buildUnit(self, unit, dirs[i][0], dirs[i][1], override_savings)){
 			ok_dirs.push(i);
 		}
 	}
 	if (ok_dirs.length === 0){
-		self.log("Unable to build unit " + unit)
-		return;
+		return undefined;
 	}
-	let i = util.rand_int(ok_dirs.length);
+	let i = ok_dirs[util.rand_int(ok_dirs.length)];
+	self.log(dirs[i][0] + " " + dirs[i][1]);
 
 	return self.buildUnit(unit, dirs[i][0], dirs[i][1]);
 }
