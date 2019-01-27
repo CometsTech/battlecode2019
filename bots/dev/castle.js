@@ -57,6 +57,10 @@ castle.turn = (self) => {
 		new_state = BUILDING_PILGRIMS;
 	}
 
+	if (self.turtle_constructed === false) {
+		new_state = TURTLING
+	}
+
 	// Note the 0.99 heuristic is to permit not *always* defending... perhaps use another metric
 	if ((self.enemies.length > 0) && (self.turtle_constructed === false) && (Math.random() < 0.99)) {
 		new_state = DEFENDING;
@@ -91,14 +95,7 @@ function turn_build_pilgrims(self){
 }
 
 function turn_turtle(self){
-	var d = [-1, 1];
-	while (false) {
-		let dx = d[Math.round(Math.random())];
-		let dy = d[Math.round(Math.random())];
-		if (util.can_buildUnit(self, SPECS.PROPHET, dx, dy)){
-			return self.buildUnit(SPECS.PROPHET, dx, dy);
-		}
-	}
+	return rand_build(self, SPECS.PROPHET, self.availableDirections)
 }
 
 function turn_defend(self){
