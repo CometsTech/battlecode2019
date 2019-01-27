@@ -37,6 +37,14 @@ castle.turn = (self) => {
 	if (castle_verbosity > 0) {
 		self.log("Castle health: " + self.me.health + " on turn " + self.me.turn + " with time " + self.me.time);
 	}
+	if (self.last_fuel < self.fuel){
+		self.bank_fuel += 0.1 * (self.fuel - self.last_fuel);
+	}
+	if (self.last_karb < self.karbonite){
+		self.bank_karb += 0.1 * (self.karbonite - self.last_karb);
+	}
+	self.last_fuel = self.fuel;
+	self.last_karb = self.karbonite;
 	// self.log(self.visible_close_to_far[0]);
 	self.vis_bots = self.getVisibleRobots();
 	self.neighbor_vis = util.make_array(-1, [3, 3]);

@@ -18,6 +18,10 @@ church.init = (self) => {
         }
     }
     self.nearby_rec_locs = nearby_rec_locs;
+    self.bank_karb = 0;
+    self.bank_fuel = 0;
+    self.last_fuel = 0;
+    self.last_karb = 0;
 };
 function turn_defend(self){
     // TODO broadcast relevant signal to turtle about killing radio-ing enemies
