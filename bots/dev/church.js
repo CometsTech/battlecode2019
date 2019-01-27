@@ -60,6 +60,12 @@ function turn_defend(self){
             }
         }
         // If unit isn't close enough to hit with a powerful unit, try just shooting it with castle
+
+        self.log("Trying to make unit to defend me.")
+        if (util.can_buildUnit(self, SPECS.PROPHET, make_dir.dx, make_dir.dy, 1)) {
+            return self.buildUnit(SPECS.PROPHET, make_dir.dx, make_dir.dy);
+        }
+
         // If unit hasn't entered attack range, but in vision range, build preacher and send after
         // TODO Check if the unit can actually reach attack range
         // TODO SET OVERRIDE SIGNAL TO TELL unit to move more
@@ -106,12 +112,13 @@ church.turn = (self) => {
     self.log("occupaiton nos");
     self.log(self.nearby_rec_locs.length);
     self.log(num_occupied_sites);
+    if (self.enemies.length > 0) {
+        return turn_defend(self);
+    }
     if (num_occupied_sites + 1 < self.nearby_rec_locs.length){
         return rand_build(self, SPECS.PILGRIM, self.availableDirections, 0.02);
     }
-    // if (self.enemies.length > 0) {
-    //     return turn_defend(self);
-    // }
+
 };
 
 function rand_build(self, unit, dirs, override_savings=0){

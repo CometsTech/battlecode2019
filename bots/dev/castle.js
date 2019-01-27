@@ -75,11 +75,15 @@ castle.turn = (self) => {
 	}
 
 	// Set castle state:
-	var new_state = HARASSING; // default
+	var new_state = TURTLING; // default
 
 	if ((self.unit_counts[SPECS.PILGRIM] < self.target_counts[SPECS.PILGRIM] && Math.random() < 0.66)
 		|| Math.random() < 0.2) {
 		new_state = BUILDING_PILGRIMS;
+	}
+
+	if (Math.random() < 10 / Math.min(25, self.turn)){
+		new_state = HARASSING;
 	}
 
 	if (self.turtle_constructed === false && (Math.random() < 0.5)) {
