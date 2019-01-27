@@ -80,7 +80,7 @@ util.can_buildUnit = (robot, unit, dx, dy, override_savings=0) => {
 	return (util.is_open(robot, robot.me.x+dx, robot.me.y+dy) &&
 		robot.karbonite > SPECS.UNITS[unit].CONSTRUCTION_KARBONITE + min_karb&&
 		robot.fuel > SPECS.UNITS[unit].CONSTRUCTION_FUEL + min_fuel&&
-		robot.map[robot.me.x+dx][robot.me.y+dy] && dx*dx + dy*dy <= 2);
+		robot.map[robot.me.y+dy][robot.me.x+dx] && dx*dx + dy*dy <= 2);
 };
 
 util.can_mine = (robot) => {
