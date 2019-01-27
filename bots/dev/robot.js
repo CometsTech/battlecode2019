@@ -34,7 +34,7 @@ class MyRobot extends BCAbstractRobot{
 	}
 	
 	turn(){
-		this.castleTalk(this.me.unit << 5)
+		this.castleTalk(this.me.unit << 5);
 		if(!this.inited){
 			this.init();
 		}
