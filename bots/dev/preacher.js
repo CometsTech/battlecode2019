@@ -3,7 +3,7 @@ import util from './util.js';
 
 var preacher = {};
 preacher.init = (self) => {
-
+	
 };
 
 preacher.turn = (self) => {

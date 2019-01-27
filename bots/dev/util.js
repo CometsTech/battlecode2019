@@ -188,18 +188,30 @@ util.close_to_far = (mindist, maxdist) => {
 
 util.nearest_units = (robot, close_to_far) => {
 	let map = robot.getVisibleRobotMap();
-	let retval = {friendlies: [], enemies: []};
-	for (dir of close_to_far) {
-		if (map[dir.y][dir.x] > 0) {
-			let looking_at = robot.getRobot(map[dir.y][dir.x]);
+	let retval = {friendlies: [], enemies: [], nearest_enemy_attacker: undefined, signaling_enemies: []};
+	close_to_far.forEach( (dir) => {
+		let abs = {x: robot.me.x + dir.x, y: robot.me.y+dir.y};
+		if ((abs.x < 0) || (abs.x >= robot.map_s_x) || (abs.y < 0) || (abs.y >= robot.map_s_x)) {
+			return;
+		}
+		if (map[abs.y][abs.x] > 0) {
+			let looking_at = robot.getRobot(map[abs.y][abs.x]);
 			if (looking_at.team !== robot.me.team) {
-				retval.enemies.push({x: dir.x, y: dir.y, robot: looking_at});
+				retval.enemies.push({dx: dir.x, dy: dir.y, robot: looking_at});
+				if (retval.nearest_enemy_attacker === undefined) {
+					if ((robot.me.unit === SPECS.CASTLE) || (robot.me.unit === SPECS.PREACHER) || (robot.me.unit === SPECS.CRUSADER) || (robot.me.unit === SPECS.PROPHET)) {
+						retval.nearest_enemy_attacker = {dx: dir.x, dy: dir.y, robot: looking_at};
+					}
+				}
+				if (robot.isRadioing(looking_at)) {
+					signaling_enemies.push({dx: dir.x, dy: dir.y, robot: looking_at});
+				}
 			}
 			else {
-				retval.friendlies.push({x: dir.x, y: dir.y, robot: looking_at);
+				retval.friendlies.push({dx: dir.x, dy: dir.y, robot: looking_at});
 			}
 		}
-	}
+	} );
 	return retval;
 };
 
