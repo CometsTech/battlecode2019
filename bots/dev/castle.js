@@ -79,19 +79,27 @@ function turn_defend(self){
 function turn_attack(self){
 	// TODO FIX @AADITYA
 	if(self.me.turn < 40){
-		for(var d of availableDirections){
-			if(util.can_buildUnit(self, SPECS.CRUSADER, d[0], d[1])){
-				return self.buildUnit(SPECS.CRUSADER, d[0], d[1]);
-			}
+		to_build = SPECS.CRUSADER;
+	}
+	else {
+		to_build = SPECS.PREACHER
+	}
+	return rand_build(self, to_build, self.availableDirections)
+}
+
+function rand_build(self, unit, dirs){
+	let ok_dirs = [];
+	for (let i = 0; i < dirs.length; i++){
+		if (util.can_buildUnit(self, unit, dirs[i][0], dirs[i][1])){
+			ok_dirs.push(i);
 		}
 	}
-	else{
-		for(var d of availableDirections){
-			if(util.can_buildUnit(self, SPECS.PROPHET, d[0], d[1]) && Math.random() < 0.4){
-				return self.buildUnit(SPECS.PROPHET, d[0], d[1]);
-			}
-		}
+	if (ok_dirs.length === 0){
+		return;
 	}
+	let i = util.rand_int(ok_dirs.length);
+
+	return self.buildUnit(unit, dirs[i][0], dirs[i][1]);
 }
 
 export default castle;
