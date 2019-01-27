@@ -31,8 +31,8 @@ castle.turn = (self) => {
 
 	self.availableDirections = util.find_open_adjacents(self);
 	self.friendlies = [];
-	self.nearest_enemies = util.nearest_enemies(self, self.attack_close_to_far);
-	self.log(self.nearest_enemies);
+	self.enemies = util.nearest_enemies(self, self.visible_close_to_far);
+	self.log(self.enemies);
 
 	// TODO only get unit counts if time permits
 	if (self.me.time > 10) {
@@ -57,7 +57,7 @@ castle.turn = (self) => {
 	}
 
 	// Note the 0.99 heuristic is to permit not *always* defending... perhaps use another metric
-	if ((self.nearest_enemies.length > 0) && (self.turtle_constructed === false) && (Math.random() < 0.99)) {
+	if ((self.enemies.length > 0) && (self.turtle_constructed === false) && (Math.random() < 0.99)) {
 		new_state = DEFENDING;
 	}
 

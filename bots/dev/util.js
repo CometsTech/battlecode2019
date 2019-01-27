@@ -186,13 +186,17 @@ util.close_to_far = (mindist, maxdist) => {
 	return retval;
 };
 
-util.nearest_enemies = (robot, close_to_far) => {
+util.nearest_units = (robot, close_to_far) => {
 	let map = robot.getVisibleRobotMap();
-	let retval = [];
+	let retval = {friendlies: [], enemies: []};
 	for (dir of close_to_far) {
 		if (map[dir.y][dir.x] > 0) {
-			if (robot.getRobot(map[dir.y][dir.x]).team !== robot.me.team) {
-				retval.push({x: dir.x, y: dir.y, id: map[dir.y][dir.x]});
+			let looking_at = robot.getRobot(map[dir.y][dir.x]);
+			if (looking_at.team !== robot.me.team) {
+				retval.enemies.push({x: dir.x, y: dir.y, robot: looking_at});
+			}
+			else {
+				retval.friendlies.push({x: dir.x, y: dir.y, robot: looking_at);
 			}
 		}
 	}
