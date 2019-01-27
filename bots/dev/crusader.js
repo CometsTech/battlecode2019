@@ -70,23 +70,114 @@ function init_roamer(self){
 	self.dir_weights = o_dir_cnts;
 }
 function init_resourceror(self){
+	let inv_loc_list = util.make_array(-1, [self.map_s_y, self.map_s_x]);
 	let loc_list = [self.me];
+	let fuel_locs = [];
 	for (let j = 0; j < self.map_s_y; j++){
 		for (let i = 0; i < self.map_s_x; i++){
-			if (self.fuel_map[j][i] && (i !== self.me.x || j !== self.me.y)) {
-				loc_list.push({x: i, y: j});
+			if (self.fuel_map[j][i]){
+				fuel_locs.push({x:i, y:j});
+				if (i !== self.me.x || j !== self.me.y){
+					inv_loc_list[j][i] = loc_list.length;
+					loc_list.push({x:i, y:j});
+				}
 			}
 		}
 	}
 	// self.path_fuel = util.bfs(self, fuel_locs);
+	let karb_locs = [];
 	for (let j = 0; j < self.map_s_y; j++){
 		for (let i = 0; i < self.map_s_x; i++){
-			if (self.karbonite_map[j][i] && (i !== self.me.x || j !== self.me.y)) {
-				loc_list.push({x: i, y: j});
+			if (self.karbonite_map[j][i]){
+				karb_locs.push({x:i, y:j});
+				if (i !== self.me.x || j !== self.me.y){
+					inv_loc_list[j][i] = loc_list.length;
+					loc_list.push({x:i, y:j});
+				}
 			}
 		}
 
 	}
+	self.inv_loc_list = inv_loc_list;
+	// return;
+	// self.path_karb = util.bfs(self, karb_locs);
+	// this.fuel_tree_data = this.pilgrim_make_tree([this.me].concat(fuel_locs));
+	// this.karb_tree_data = this.pilgrim_make_tree([this.me].concat(karb_locs));
+	// self.gather_karb = true; // TODO: make some algo for this
+	// if (self.me.turn === 1){
+	//     self.gather_karb = true;
+	// }
+	// else if (self.me.turn === 2){
+	//     self.gather_karb = false;
+	// }
+	// else{
+	//     let fuel_weight = self.fuel / 10;
+	//     let karb_weight = self.karbonite / 2;
+	//     self.gather_karb = Math.random() * (fuel_weight + karb_weight) < fuel_weight;
+	// }
+	// return;
+	// return;
+	let meta_loc_list = [];
+	// let meta_id = util.make_array(-1, [self.map_s_y, self.map_s_x]);
+	let loc_id = util.make_array(-1, [loc_list.length]);
+	for (let i = 0; i < loc_list.length; i++){ // note how code relies on self.me being first
+		let pos = loc_list[i];
+		let my_id = meta_loc_list.length;
+		if (loc_id[i] > -1){
+			my_id = loc_id[i];
+			meta_loc_list[my_id].push({p: pos, i: i});
+		}
+		else {
+			loc_id[i] = meta_loc_list.length;
+			meta_loc_list.push([{p: pos, i: i}]);
+			let q = [pos];
+			while (q.length > 0){
+				let pop = q.shift();
+				for (let dy = -2; dy < 3; dy++){
+					for (let dx = -2; dx < 3; dx++){
+						let p = util.add_pos(pop, {x: dx, y: dy});
+						if (util.on_map(self, p)){
+							let inv_i = inv_loc_list[p.y][p.x];
+							if (inv_i > -1 && loc_id[inv_i] === -1){
+								loc_id[inv_i] = my_id;
+								q.push(p);
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	// self.log(meta_loc_list);
+	// for (let i = 0; i < meta_loc_list.length; i++){
+	//     self.log(meta_loc_list[i]);
+	// }
+	let center_nodes = util.make_array(-1, meta_loc_list.length);
+	let center_loc_list = util.make_array(-1, meta_loc_list.length);
+	for (let i = 0; i < meta_loc_list.length; i++){
+		let node_list = meta_loc_list[i];
+		let min_max_dist = max_dist;
+		let best_j = -1;
+		for (let j = 0; j < node_list.length; j++){ // should be fine so long as map isn't one big resource deposit
+			let max_dist = 0;
+			for (let k = 0; k < node_list.length; k++){
+				let dist = util.squared_distance(node_list[j].p, node_list[k].p);
+				if (dist > max_dist){
+					max_dist = dist;
+				}
+			}
+			if (max_dist < min_max_dist){
+				min_max_dist = max_dist;
+				best_j = j;
+			}
+		}
+		// self.log(best_j);
+		center_nodes[i] = best_j;
+		center_loc_list[i] = node_list[best_j].p;
+	}
+
+	self.loc_list = loc_list;
+	self.meta_loc_list = meta_loc_list;
 	self.tree_data = util.pilgrim_make_tree(self, loc_list);
 	self.current_node = 0;
 }
@@ -128,6 +219,9 @@ function turn_roamer(self){
 	for (let i = 0; i < self.diff_list.length; i++){
 		let p = util.add_pos(self.me, self.diff_list[i]);
 		if (util.on_map(self, p) && self.map[p.y][p.x] && dir_weights[i] > 0 && self.diff_vis[i] <= 0){
+			// self.log(p);
+			// self.log(i);
+			// self.log(self.diff_list[i]);
 			valid_dirs.push(self.diff_list[i]);
 			valid_weights.push(dir_weights[i])
 		}
@@ -152,8 +246,7 @@ function turn_resourceror(self){
 		self.current_node = self.tree_data.voronoi_id[self.me.y][self.me.x];
 		target = tree_info[self.current_node];
 	}
-	if (self.current_node === 0||
-		(self.tree_data.voronoi_id[self.me.y][self.me.x] === self.current_node &&
+	if ((self.tree_data.voronoi_id[self.me.y][self.me.x] === self.current_node &&
 			util.squared_distance(self.me, target) <= 16)) {
 		let weights = [];
 		let children = tree_info[self.current_node].children;
@@ -185,7 +278,7 @@ function turn_resourceror(self){
 	let diff_vis = util.make_array(-1, [self.diff_list.length]);
 	for (let i = 0; i < visible_robots.length; i++) {
 		let rob = visible_robots[i];
-		if (util.squared_distance(rob, self.me) <= 4 && rob.id !== self.me.id) {
+		if (util.squared_distance(rob, self.me) <= 9 && rob.id !== self.me.id) {
 			diff_vis[self.inv_diff_list[rob.y - self.me.y + 3][rob.x - self.me.x + 3]] = rob.id;
 		}
 	}
@@ -198,6 +291,7 @@ function turn_resourceror(self){
 		}
 	}
 	if (valid_dirs.length > 0){
+		self.log(valid_dirs);
 		let dir = valid_dirs[util.rand_int(valid_dirs.length)];
 		return self.move(dir.x, dir.y);
 	}
@@ -208,7 +302,8 @@ function turn_resourceror(self){
 	valid_dirs = [];
 	for (let i = 0; i < self.diff_list.length; i++) {
 		let p = {x: self.me.x + self.diff_list[i].x, y: self.me.y + self.diff_list[i].y, i: self.current_node};
-		if (util.on_map(self, p) && self.map[p.y][p.x] && util.get_tree_dist(self, p) === curr_dist && diff_vis[i] <= 0) {
+		if (util.on_map(self, p) && self.map[p.y][p.x] &&
+			util.get_tree_dist(self, p) === curr_dist && diff_vis[i] <= 0) {
 			valid_dirs.push(self.diff_list[i]);
 		}
 	}
@@ -231,6 +326,7 @@ crusader.turn = (self) => {
 			diff_vis[self.inv_diff_list[rob.y - self.me.y + 3][rob.x - self.me.x + 3]] = rob.id;
 		}
 	}
+	// self.log(self.diff_vis);
 	self.diff_vis = diff_vis;
 
 

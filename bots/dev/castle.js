@@ -36,7 +36,17 @@ castle.turn = (self) => {
 		self.log("Castle health: " + self.me.health + " on turn " + self.me.turn + " with time " + self.me.time);
 	}
 	// self.log(self.visible_close_to_far[0]);
-
+	self.vis_bots = self.getVisibleRobots();
+	self.neighbor_vis = util.make_array(-1, [3, 3]);
+	self.neighbor_vis[1][1] = self.me.id;
+	for (let i = 0; i < self.vis_bots.length; i++){
+		let bot = self.vis_bots[i];
+		// self.log(bot);
+		if (util.squared_distance(bot, self.me) < 3){
+			self.neighbor_vis[bot.y - self.me.y + 1][bot.x - self.me.x + 1] = bot.id;
+		}
+	}
+	// self.log(self.neighbor_vis);
 	self.availableDirections = util.find_open_adjacents(self);
 	self.teammates = []; // can be out of vision range
 	self.nearest = util.nearest_units(self, self.visible_close_to_far);
@@ -47,7 +57,7 @@ castle.turn = (self) => {
 	// TODO only get unit counts if time permits
 	if (self.me.time > 10) {
 		self.unit_counts = [0, 0, 0, 0, 0, 0];
-		self.getVisibleRobots().forEach((robot) => {
+		self.vis_bots.forEach((robot) => {
 			if ((self.isVisible(robot) === false) || (robot.team === self.me.team)) {
 				self.teammates.push(robot);
 				self.unit_counts[parseInt((256 + robot.castle_talk).toString(2).substring(1, 4), 2)]++;
@@ -214,8 +224,8 @@ function rand_build(self, unit, dirs, override_savings=0){
 	if (ok_dirs.length === 0){
 		return undefined;
 	}
-	let i = util.rand_int(ok_dirs.length);
-	console.log(dirs[i][0], dirs[i][1]);
+	let i = ok_dirs[util.rand_int(ok_dirs.length)];
+	self.log(dirs[i][0] + " " + dirs[i][1]);
 
 	return self.buildUnit(unit, dirs[i][0], dirs[i][1]);
 }
