@@ -104,8 +104,13 @@ function turn_build_pilgrims(self){
 }
 
 function turn_turtle(self){
-	return rand_build(self, SPECS.PROPHET, self.availableDirections)
-}
+	let try_build = rand_build(self, SPECS.PROPHET, [[1, 1], [1, -1], [-1, 1], [-1, -1]], 1);
+    if (try_build === undefined) {
+    	return; // TODO add functionality
+    }
+    else {
+    	return try_build;
+    }}
 
 function turn_defend(self){
 	// TODO broadcast relevant signal to turtle about killing radio-ing enemies

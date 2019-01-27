@@ -79,6 +79,9 @@ prophet.init = (self) => {
 };
 
 prophet.turn = (self) => {
+
+	self.availableDirections = util.find_open_adjacents(self);
+
 	var new_state = TURTLING
 
 	// add code to adjust state... 
@@ -106,31 +109,51 @@ function turn_turtle(self) {
 	var visibleRobots = self.getVisibleRobots();
 	for(var robot of visibleRobots){
 		if(robot.unit == 0 && robot.team == self.me.team){
+			
+			//Making sure first layer of turtle is complete
+			if (util.is_open(self, robot.x+1, robot.y+1) || util.is_open(self, robot.x+1, robot.y-1) ||util.is_open(self, robot.x-1, robot.y+1) ||util.is_open(self, robot.x-1, robot.y-1)){
+				return;
+			}
+
 			var dx = robot.x - self.me.x, dy = robot.y - self.me.y;
 			var x_dir = -Math.sign(dx)
 			var y_dir = -Math.sign(dy)
-			if (Math.abs(dx) <= 3 || Math.abs(dy) <= 3){
+
+			//Move out from castle diagonally
+			if (distance(dx, dy) < 3){
 				if (util.can_move(self, x_dir, y_dir)){
 					return self.move(x_dir, y_dir);
 				}
 			}
+			//Move to the side
 			else {
-				if (util.can_move(self, 2*x_dir, 0)){
-					return self.move(2*x_dir, 0);
+				if (Math.abs(dx) === 3 && Math.abs(dy) === 3){
+					return;
 				}
-				if (util.can_move(self, 0, 2*y_dir)){
-					return self.move(0, 2*y_dir);
-				}
-				if (util.can_move(self, -2*x_dir, 0)){
+				if (util.can_move(self, -2*x_dir, 0) && Math.abs(dx) <= 3 || Math.abs(dy) <= 3){
 					return self.move(-2*x_dir, 0);
 				}
-				if (util.can_move(self, 0, -2*y_dir)){
+				if (util.can_move(self, 0, -2*y_dir) && Math.abs(dx) <=3 || Math.abs(dy) <= 3){
 					return self.move(0, -2*y_dir);
 				}
+				
 			}
 		}
 	}
 }
+
+function distance(a, b) {
+  var farthest = 0
+  var dimensions = Math.max(a.length, b.length)
+  for (var i = 0; i < dimensions; i++) {
+    var distance = Math.abs((b[i] || 0) - (a[i] || 0))
+    if (distance > farthest) {
+      farthest = distance
+    }
+  }
+  return farthest
+}
+
 
 function turn_not_turtling(self) {
 	//First check for visible enemies
