@@ -112,7 +112,7 @@ crusader.init = (self) => {
 	self.is_re_init = false;
 
 	self.is_roamer = false;
-	if (Math.random() < 0.5){
+	if (Math.random() < 0){
 		self.is_roamer = true;
 		return init_roamer(self);
 	}

@@ -1,6 +1,8 @@
 import {BCAbstractRobot, SPECS} from 'battlecode';
 import util from './util.js';
 
+const castle_verbosity = 0;
+
 var castle = {};
 
 // states
@@ -29,7 +31,9 @@ castle.init = (self) => {
 
 // TODO: degenerate cases where u should insta attack enemy castle
 castle.turn = (self) => {
-	self.log("Castle health: " + self.me.health + " on turn " + self.me.turn + " with time " + self.me.time);
+	if (castle_verbosity > 0) {
+		self.log("Castle health: " + self.me.health + " on turn " + self.me.turn + " with time " + self.me.time);
+	}
 	// self.log(self.visible_close_to_far[0]);
 
 	self.availableDirections = util.find_open_adjacents(self);
@@ -42,13 +46,15 @@ castle.turn = (self) => {
 	// TODO only get unit counts if time permits
 	if (self.me.time > 10) {
 		self.unit_counts = [0, 0, 0, 0, 0, 0];
-		self.getVisibleRobots().forEach( (robot) => {
+		self.getVisibleRobots().forEach((robot) => {
 			if ((self.isVisible(robot) === false) || (robot.team === self.me.team)) {
 				self.teammates.push(robot);
-				self.unit_counts[parseInt((256+robot.castle_talk).toString(2).substring(1, 4), 2)]++;
+				self.unit_counts[parseInt((256 + robot.castle_talk).toString(2).substring(1, 4), 2)]++;
 			}
 		});
-		self.log(self.unit_counts);
+		if (castle_verbosity > 0) {
+			self.log(self.unit_counts);
+		}
 	}
 	else {
 		self.log("RUNNING LOW ON TIME YIKE")
@@ -76,7 +82,9 @@ castle.turn = (self) => {
 
 	self.state = new_state;
 
-	self.log("Castle state: " + self.state);
+	if (castle_verbosity > 0){
+		self.log("Castle state: " + self.state);
+	}
 
 	switch (self.state) {
 		case BUILDING_PILGRIMS:
