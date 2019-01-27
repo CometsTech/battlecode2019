@@ -132,7 +132,7 @@ pilgrim.init = (self) => {
     self.made_voronoi_dist = false;
 };
 function turn_reset(self){
-    self.log('resettting')
+    self.log('resettting');
     if (self.tree_data.voronoi_id[self.me.y][self.me.x] === 0){
         self.current_node = 0;
         self.state = PATHING_TO_NODE;
