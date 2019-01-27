@@ -30,6 +30,10 @@ castle.init = (self) => {
 	self.log(self.target_counts);
 
 	self.turtle_radius = 4;
+	self.bank_karb = 0;
+	self.bank_fuel = 0;
+	self.last_fuel = 0;
+	self.last_karb = 0;
 };
 
 // TODO: degenerate cases where u should insta attack enemy castle
@@ -90,11 +94,11 @@ castle.turn = (self) => {
 		new_state = BUILDING_PILGRIMS;
 	}
 
-	if (Math.random() < 10 / Math.min(25, self.turn)){
-		new_state = HARASSING;
-	}
+	// if (Math.random() < 10 / Math.min(25, self.turn)){
+	// 	new_state = HARASSING;
+	// }
 
-	if (self.turtle_constructed === false && (Math.random() < 0.5)) {
+	if (self.turn > 20 && self.turtle_constructed === false && (Math.random() < 0.5)) {
 		new_state = TURTLING;
 	}
 

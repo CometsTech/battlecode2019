@@ -210,6 +210,7 @@ pilgrim.init = (self) => {
     //     let pos = self.tree_data.tree_info[i];
     //     self.tree_data.tree_info[i].is_karb = self.karbonite_map[pos.y][pos.x];
     // }
+    self.last_node = -1;
     self.current_node = 0;
     if (verbosity > 1){
         self.log('fin init_pilgrim');
@@ -220,11 +221,14 @@ pilgrim.init = (self) => {
     }
     self.made_voronoi_dist = false;
     self.has_init_node_vars = false;
+    self.last_health = self.me.health;
 };
 function turn_reset(self){
     self.log('resettting');
-    if (self.tree_data.voronoi_id[self.me.y][self.me.x] === 0){
-        self.current_node = 0;
+    let tree_info = self.tree_data.tree_info;
+    if (self.tree_data.voronoi_id[self.me.y][self.me.x] === tree_info[self.last_node].parent){
+        // self.tree_data.tree_info[self.me.]
+        self.current_node = tree_info[self.last_node].parent;
         self.state = PATHING_TO_NODE;
         return turn_path_to_node(self);
     }
@@ -232,7 +236,7 @@ function turn_reset(self){
         let path_q = [];
         for (let y = 0; y < self.map_s_y; y++){
             for (let x = 0; x < self.map_s_x; x++){
-                if (self.tree_data.voronoi_id[y][x] === 0){
+                if (self.tree_data.voronoi_id[y][x] === tree_info[self.last_node].parent){
                     path_q.push({x: x, y: y});
                 }
             }
@@ -255,7 +259,7 @@ function turn_reset(self){
     valid_dirs = [];
     for (let i = 0; i < self.diff_list.length; i++) {
         let p = {x: self.me.x + self.diff_list[i].x, y: self.me.y + self.diff_list[i].y, i: self.current_node};
-        if (util.on_map(self, p) && self.voronoi_dist[p.y][p.x] === curr_dist && self.diff_vis[i] <= 0) {
+        if (util.on_map(self, p) && this.map[p.y][p.x] && self.voronoi_dist[p.y][p.x] === curr_dist && self.diff_vis[i] <= 0) {
             valid_dirs.push(self.diff_list[i]);
         }
     }
@@ -267,8 +271,18 @@ function turn_reset(self){
     return self.move(valid_dirs[i].x, valid_dirs[i].y);
 }
 function turn_path_to_node(self) {
+    // for (let i = 0; i < self.vis_bots.length; i++){
+    //     if (self.vis_bots[i].team !== self.me.team && self.vis_bots[i].unit !== SPECS.PILGRIM){
+    //         self.last_node = self.current_node;
+    //         self.log('aah theres a bot!');
+    //         self.tree_data.tree_info[self.last_node].weight = 0;
+    //         self.state = PATHING_TO_RESET;
+    //         return turn_reset(self);
+    //     }
+    // }
     if (self.current_node < 0) {
         self.log('end of line');
+        self.tree_data.tree_info[self.last_node].weight = 0;
         self.state = PATHING_TO_RESET;
         return turn_reset(self);
         // if (Math.random() < 0.1){
@@ -323,7 +337,9 @@ function turn_path_to_node(self) {
         let weights = [];
         let children = tree_info[self.current_node].children;
         for (let i = 0; i < children.length; i++){
-            weights.push(tree_info[children[i]].node_weight);
+            if (tree_info[children[i]].node_weight > 0) {
+                weights.push(tree_info[children[i]].node_weight);
+            }
         }
         let child = -1;
         if (children.length > 0){
@@ -331,6 +347,7 @@ function turn_path_to_node(self) {
             // self.log(i);
             child = children[i];
         }
+        self.last_node = self.current_node;
         self.current_node = child;
         if (child === -1){
             self.log('end of line');
@@ -708,6 +725,7 @@ pilgrim.turn = (self) => {
     // self.log((self.me.unit << 5) + (self.state << 2));
     self.castleTalk((self.me.unit << 5) + (self.state << 1));
     self.vis_bots = self.getVisibleRobots();
+
     let diff_vis = util.make_array(-1, [self.diff_list.length]);
     let loc_vis = util.make_array(-1, [self.loc_list.length]);
     for (let i = 0; i < self.vis_bots.length; i++) {

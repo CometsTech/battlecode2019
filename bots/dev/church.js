@@ -18,10 +18,8 @@ church.init = (self) => {
         }
     }
     self.nearby_rec_locs = nearby_rec_locs;
-    self.bank_karb = 0;
-    self.bank_fuel = 0;
-    self.last_fuel = 0;
-    self.last_karb = 0;
+    self.built_bots = 0;
+
 };
 function turn_defend(self){
     // TODO broadcast relevant signal to turtle about killing radio-ing enemies
@@ -119,7 +117,8 @@ church.turn = (self) => {
     if (self.enemies.length > 0) {
         return turn_defend(self);
     }
-    if (num_occupied_sites + 1 < self.nearby_rec_locs.length){
+    if (num_occupied_sites + 1 < self.nearby_rec_locs.length && self.built_bots < self.nearby_rec_locs.length * 1.3){
+        self.built_bots++;
         return rand_build(self, SPECS.PILGRIM, self.availableDirections, 0.02);
     }
 
