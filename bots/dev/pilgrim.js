@@ -642,7 +642,8 @@ function turn_mine(self){
             if (nearby_units[i].team === self.me.team &&
                 util.squared_distance(nearby_units[i], self.me) < 52 &&(nearby_units[i].unit === SPECS.CHURCH || nearby_units[i].unit === SPECS.CASTLE)){
                 let church = nearby_units[i];
-                let dist = self.path_to_node[church.y][church.x];
+                // let dist = self.path_to_node[church.y][church.x];
+                let dist = util.squared_distance(self.me, church);
                 if (dist < best_dist){
                     best_church = church;
                     best_dist = dist;
@@ -696,22 +697,26 @@ function turn_path_to_church(self){
         // self.log(self.me.karbonite + " " + self.me.fuel);
         // self.log(self.me);
         self.state = PATHING_BACK;
+        self.first_church = true;
         return self.give(target_loc.x - self.me.x, target_loc.y - self.me.y, self.me.karbonite, self.me.fuel);
     }
-    if ((self.me.fuel < 100 && self.karbonite > 50 && self.fuel < 200) ||
+    if (self.first_church && (self.me.fuel < 100 && self.karbonite > 50 && self.fuel < 200) ||
         (self.me.karbonite < 20 && 4 * curr_dist > self.me.fuel)){
         self.state = PATHING_BACK;
         self.repeat = true;
+        self.first_church = true;
         return turn_path_back(self);
     }
     for (let i = 0; i < self.diff_list.length; i++) {
         let p = {x: self.me.x + self.diff_list[i].x, y: self.me.y + self.diff_list[i].y, i: self.current_node};
         if (util.on_map(self, p) && dist_map[p.y][p.x] === curr_dist - 1 && self.diff_vis[i] <= 0) {
+            self.first_church = false;
             return self.move(self.diff_list[i].x, self.diff_list[i].y);
         }
     }
     if (Math.random() < 0.15){
         self.state = PATHING_BACK;
+        self.first_church = true;
     }
     let valid_dirs = [];
     for (let i = 0; i < self.diff_list.length; i++) {
@@ -724,6 +729,7 @@ function turn_path_to_church(self){
         self.log('path_to_church blocked');
         return
     }
+    self.first_church = false;
     let i = util.rand_int(valid_dirs.length);
     return self.move(valid_dirs[i].x, valid_dirs[i].y);
 }

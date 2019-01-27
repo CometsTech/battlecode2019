@@ -51,8 +51,8 @@ castle.turn = (self) => {
 	// if (self.last_karb < self.karbonite){
 	// 	self.bank_karb += 0.1 * (self.karbonite - self.last_karb);
 	// }
-	self.bank_karb += 1;
-	self.bank_fuel += 5;
+	self.bank_karb += 0.5;
+	self.bank_fuel += 2.5;
 	self.last_fuel = self.fuel;
 	self.last_karb = self.karbonite;
 	// self.log(self.visible_close_to_far[0]);
@@ -104,7 +104,7 @@ castle.turn = (self) => {
 	// 	new_state = HARASSING;
 	// }
 
-	if (self.turn > 20 && self.turtle_constructed === false && (Math.random() < 0.5)) {
+	if (self.me.turn > 20 && self.turtle_constructed === false && (Math.random() < 0.5)) {
 		new_state = TURTLING;
 	}
 
@@ -144,7 +144,7 @@ castle.turn = (self) => {
 };
 
 function turn_build_pilgrims(self){
-    let try_build = rand_build(self, SPECS.PILGRIM, self.availableDirections, 1/(self.turn*self.turn));
+    let try_build = rand_build(self, SPECS.PILGRIM, self.availableDirections, 1/(self.me.turn*self.me.turn));
     if (try_build === undefined) {
     	return; // TODO add functionality
     }
