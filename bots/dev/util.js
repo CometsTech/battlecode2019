@@ -466,7 +466,7 @@ util.pilgrim_make_tree = (self, loc_list) => {
 				node_dists[f.i] = node_dists[e.i] + f.d;
 				tree_info[f.i].parent = e.i; // note that parent can be overwritten a few times
 				tree_info[f.i].distance = node_dists[f.i];
-				// tree_info[f.i].node_weight = 1 / node_dists[f.i];
+				tree_info[f.i].node_weight = 1 / node_dists[f.i];
 				q.push({val: node_dists[f.i], i: f.i});
 			}
 		}

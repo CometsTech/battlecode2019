@@ -382,6 +382,10 @@ function turn_path_to_node(self) {
 */
     // self.log(self.current_node);
     curr_dist = util.get_tree_dist(self, {x: self.me.x, y: self.me.y, i: self.current_node});
+    if (curr_dist === max_dist){
+        self.current_node = self.tree_data.voronoi_id[self.me.y][self.me.x];
+        return turn_path_to_node(self);
+    }
     /*if (curr_dist === 0){
         self.log('arrived');
         self.log([self.me.x, self.me.y]);
@@ -434,7 +438,7 @@ function turn_on_reaching_node(self){
     // self.log(self.me.team);
     for (let i = 0; i < nearby_units.length; i++){ // TODO: detect enemy castles
         if (nearby_units[i].team === self.me.team &&
-            (nearby_units[i].unit === SPECS.CHURCH || nearby_units[i].unit === SPECS.CASTLE)){
+            util.squared_distance(nearby_units[i], self.me) < 52 &&(nearby_units[i].unit === SPECS.CHURCH || nearby_units[i].unit === SPECS.CASTLE)){
             let church = nearby_units[i];
             let dist = self.path_to_node[church.y][church.x];
             if (dist < best_dist){
@@ -630,13 +634,13 @@ function turn_path_back(self){
     return self.move(valid_dirs[i].x, valid_dirs[i].y);
 }
 function turn_mine(self){
-    if (self.me.fuel >= 100 || self.me.karbonite >= 20){
+    if (self.me.fuel >= 100 || self.me.karbonite >= 20 && !self.repeat){
         let nearby_units = self.vis_bots;
         let best_dist = max_dist + 1;
         let best_church = -1;
         for (let i = 0; i < nearby_units.length; i++){
             if (nearby_units[i].team === self.me.team &&
-                (nearby_units[i].unit === SPECS.CHURCH || nearby_units[i].unit === SPECS.CASTLE)){
+                util.squared_distance(nearby_units[i], self.me) < 52 &&(nearby_units[i].unit === SPECS.CHURCH || nearby_units[i].unit === SPECS.CASTLE)){
                 let church = nearby_units[i];
                 let dist = self.path_to_node[church.y][church.x];
                 if (dist < best_dist){
@@ -697,6 +701,8 @@ function turn_path_to_church(self){
     if ((self.me.fuel < 100 && self.karbonite > 50 && self.fuel < 200) ||
         (self.me.karbonite < 20 && 4 * curr_dist > self.me.fuel)){
         self.state = PATHING_BACK;
+        self.repeat = true;
+        return turn_path_back(self);
     }
     for (let i = 0; i < self.diff_list.length; i++) {
         let p = {x: self.me.x + self.diff_list[i].x, y: self.me.y + self.diff_list[i].y, i: self.current_node};
@@ -723,6 +729,7 @@ function turn_path_to_church(self){
 }
 pilgrim.turn = (self) => {
     // self.log((self.me.unit << 5) + (self.state << 2));
+    self.repeat = false;
     self.castleTalk((self.me.unit << 5) + (self.state << 1));
     self.vis_bots = self.getVisibleRobots();
 
