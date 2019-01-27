@@ -4,21 +4,24 @@ import util from './util.js';
 var castle = {};
 
 // states
-const BUILDING_WORKERS = 0;
+const BUILDING_PILGRIMS = 0;
 const TURTLING = 1;
 const DEFENDING = 2;
 const ATTACKING = 3;
 
-const TARGET_WORKERS = 10;
-
 castle.init = (self) => {
 	self.log("Start of game");
 	self.visible_close_to_far = util.close_to_far(1, SPECS.UNITS[SPECS.CASTLE].VISION_RADIUS);
-	self.log(SPECS.UNITS[SPECS.CASTLE].VISION_RADIUS);
 	self.attack_close_to_far = util.close_to_far(SPECS.UNITS[SPECS.CASTLE].VISION_RADIUS[0], SPECS.UNITS[SPECS.CASTLE].VISION_RADIUS[1]);
-	self.state = BUILDING_WORKERS;
+	self.log(self.visible_close_to_far.length)
+	self.state = BUILDING_PILGRIMS;
 	self.turtle_constructed = false;
-	self.worker_count = 0;
+	self.unit_counts = [0, 0, 0, 0, 0, 0];
+	self.target_counts = [-1, -1, -1, -1, -1, -1]; // ADJUST these
+	// TODO: tune hyperparameter of 0.6
+	self.target_counts[SPECS.PILGRIM] = Math.ceil( 0.6*  ([].concat.apply([], self.karbonite_map).reduce((total, present) => present ? total + 1 : total)
+														+ [].concat.apply([], self.fuel_map).reduce((total, present) => present ? total + 1 : total)) );
+	self.log(self.target_counts);
 };
 
 // TODO: degenerate cases where u should insta attack enemy castle
@@ -27,27 +30,48 @@ castle.turn = (self) => {
 	// self.log(self.visible_close_to_far[0]);
 
 	self.availableDirections = util.find_open_adjacents(self);
+	self.friendlies = []
 	self.nearest_enemies = util.nearest_enemies(self, self.attack_close_to_far);
+	self.log(self.nearest_enemies);
+
+	// TODO only get unit counts if time permits
+	if (self.me.time > 10) {
+		self.unit_counts = [0, 0, 0, 0, 0, 0];
+		self.getVisibleRobots().forEach( (robot) => {
+			if ((self.isVisible(robot) === false) || (robot.team === self.me.team)) {
+				self.friendlies.push(robot);
+				self.unit_counts[parseInt((256+robot.castle_talk).toString(2).substring(1, 4), 2)]++;
+			}
+		})
+		self.log(self.unit_counts);
+	}
+	else {
+		self.log("RUNNING LOW ON TIME YIKE")
+	}
 
 	// Set castle state:
 	var new_state = ATTACKING; // default
 
-
-	if (self.me.turn < 4) {
-		new_state = BUILDING_WORKERS;
+	if (self.unit_counts[SPECS.PILGRIM] < self.target_counts[SPECS.PILGRIM]) {
+		new_state = BUILDING_PILGRIMS;
 	}
+	
 	// Note the 0.99 heuristic is to permit not *always* defending... perhaps use another metric
 	if ((self.nearest_enemies.length > 0) && (self.turtle_constructed === false) && (Math.random() < 0.99)) {
 		new_state = DEFENDING;
 	}
 
+	if (self.me.turn < 3) {
+		new_state = BUILDING_PILGRIMS;
+	}
+
 	self.state = new_state;
 
-	self.log(self.state)
+	self.log("Castle state: " + self.state);
 
 	switch (self.state) {
-		case BUILDING_WORKERS:
-			return turn_build_workers(self);
+		case BUILDING_PILGRIMS:
+			return turn_build_pilgrims(self);
 			break;
 		case TURTLING:
 			return turn_turtle(self);
@@ -61,12 +85,8 @@ castle.turn = (self) => {
 	}
 };
 
-function turn_build_workers(self){
-    for(var d of self.availableDirections){
-    	if(util.can_buildUnit(self, SPECS.PILGRIM, d[0], d[1])){
-    		return self.buildUnit(SPECS.PILGRIM, d[0], d[1]);
-    	}
-    }
+function turn_build_pilgrims(self){
+    return rand_build(self, SPECS.PILGRIM, self.availableDirections);
 }
 
 function turn_turtle(self){
@@ -76,16 +96,16 @@ function turn_turtle(self){
 
 function turn_defend(self){
 	// TODO AADITYA PUT CODE HERE
-	return;
+	return turn_attack(self);
 }
 
 function turn_attack(self){
 	// TODO FIX @AADITYA
-	var to_build = SPECS.PREACHER
+	var to_build = SPECS.PREACHER;
 	if(self.me.turn < 40){
 		to_build = SPECS.CRUSADER;
 	}
-	return rand_build(self, to_build, self.availableDirections)
+	return rand_build(self, to_build, self.availableDirections);
 }
 
 function rand_build(self, unit, dirs){
@@ -96,6 +116,7 @@ function rand_build(self, unit, dirs){
 		}
 	}
 	if (ok_dirs.length === 0){
+		self.log("Unable to build unit " + unit)
 		return;
 	}
 	let i = util.rand_int(ok_dirs.length);
