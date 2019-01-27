@@ -4,7 +4,7 @@ USEFUL SIGNAL PATTERNS USED
 Note: We use the first k bits of an outgoing signal as a security phrase... the util checks to see if a valid signal is sent
 
 CASTLE TALK:
-	"I AM" signals
+	First 3 bits: "I AM" signals
 		0
 		1
 		2
