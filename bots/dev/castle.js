@@ -12,8 +12,7 @@ const ATTACKING = 3;
 castle.init = (self) => {
 	self.log("Start of game");
 	self.visible_close_to_far = util.close_to_far(1, SPECS.UNITS[SPECS.CASTLE].VISION_RADIUS);
-	self.attack_close_to_far = util.close_to_far(SPECS.UNITS[SPECS.CASTLE].VISION_RADIUS[0], SPECS.UNITS[SPECS.CASTLE].VISION_RADIUS[1]);
-	self.log(self.visible_close_to_far.length)
+	self.attack_close_to_far = util.close_to_far(SPECS.UNITS[SPECS.CASTLE].ATTACK_RADIUS[0], SPECS.UNITS[SPECS.CASTLE].ATTACK_RADIUS[1]);
 	self.state = BUILDING_PILGRIMS;
 	self.turtle_constructed = false;
 	self.unit_counts = [0, 0, 0, 0, 0, 0];
@@ -30,19 +29,21 @@ castle.turn = (self) => {
 	// self.log(self.visible_close_to_far[0]);
 
 	self.availableDirections = util.find_open_adjacents(self);
-	self.friendlies = [];
-	self.nearest_enemies = util.nearest_enemies(self, self.attack_close_to_far);
-	self.log(self.nearest_enemies);
+	self.teammates = []; // can be out of vision range
+	self.nearest = util.nearest_units(self, self.visible_close_to_far);
+	self.friendlies = self.nearest.friendlies;
+	self.enemies = self.nearest.enemies;
+	self.log(self.enemies);
 
 	// TODO only get unit counts if time permits
 	if (self.me.time > 10) {
 		self.unit_counts = [0, 0, 0, 0, 0, 0];
 		self.getVisibleRobots().forEach( (robot) => {
 			if ((self.isVisible(robot) === false) || (robot.team === self.me.team)) {
-				self.friendlies.push(robot);
+				self.teammates.push(robot);
 				self.unit_counts[parseInt((256+robot.castle_talk).toString(2).substring(1, 4), 2)]++;
 			}
-		})
+		});
 		self.log(self.unit_counts);
 	}
 	else {
@@ -57,7 +58,7 @@ castle.turn = (self) => {
 	}
 
 	// Note the 0.99 heuristic is to permit not *always* defending... perhaps use another metric
-	if ((self.nearest_enemies.length > 0) && (self.turtle_constructed === false) && (Math.random() < 0.99)) {
+	if ((self.enemies.length > 0) && (self.turtle_constructed === false) && (Math.random() < 0.99)) {
 		new_state = DEFENDING;
 	}
 
@@ -90,12 +91,20 @@ function turn_build_pilgrims(self){
 }
 
 function turn_turtle(self){
-	// TODO ELAINE PUT CODE HERE
-	return;
+	var d = [-1, 1];
+	while (false) {
+		let dx = d[Math.round(Math.random())];
+		let dy = d[Math.round(Math.random())];
+		if (util.can_buildUnit(self, SPECS.PROPHET, dx, dy)){
+			return self.buildUnit(SPECS.PROPHET, dx, dy);
+		}
+	}
 }
 
 function turn_defend(self){
-	// TODO AADITYA PUT CODE HERE
+	// if (self.nearest.nearest_enemy_attacker === undefined) {
+
+	// }
 	return turn_attack(self);
 }
 
