@@ -123,26 +123,21 @@ crusader.init = (self) => {
 function turn_roamer(self){
 	//If nothing then move according to plan
 	let dir_weights = self.dir_weights[self.me.y][self.me.x];
-	let rand = Math.random();
-	let tot = 0;
-	for (let i = 0; i < dir_weights.length; i++){
-		tot += dir_weights[i];
+	let valid_dirs = [];
+	let valid_weights = [];
+	for (let i = 0; i < self.diff_list.length; i++){
+		let p = util.add_pos(self.me, self.diff_list[i]);
+		if (util.on_map(self, p) && self.map[p.y][p.x] && dir_weights[i] > 0 && self.diff_vis[i] <= 0){
+			valid_dirs.push(self.diff_list[i]);
+			valid_weights.push(dir_weights[i])
+		}
 	}
-	if (tot === 0){
+	if (valid_dirs.length === 0){
 		init_roamer(self);
 		return turn_roamer(self);
 	}
-	rand *= tot;
-	let acc = 0;
-	let dir_i = 0;
-	for (let i = 0; i < dir_weights.length; i++){
-		acc += dir_weights[i];
-		if (acc > rand){
-			dir_i = i;
-			break;
-		}
-	}
-	return self.move(self.diff_list[dir_i].x, self.diff_list[dir_i].y);
+	let i = util.rand_weight(valid_weights);
+	return self.move(valid_dirs[i].x, valid_dirs[i].y);
 }
 function turn_resourceror(self){
 	if (self.current_node < 0) {
@@ -152,7 +147,11 @@ function turn_resourceror(self){
 	let tree_info = self.tree_data.tree_info;
 	let target = tree_info[self.current_node];
 	let visible_robots = self.vis_bots;
-
+	let temp_p = {x: self.me.x, y: self.me.y, i: self.current_node};
+	if (util.get_tree_dist(self, temp_p) === max_dist){
+		self.current_node = self.tree_data.voronoi_id[self.me.y][self.me.x];
+		target = tree_info[self.current_node];
+	}
 	if (self.current_node === 0||
 		(self.tree_data.voronoi_id[self.me.y][self.me.x] === self.current_node &&
 			util.squared_distance(self.me, target) <= 16)) {
