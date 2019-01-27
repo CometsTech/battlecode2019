@@ -97,8 +97,7 @@ util.can_move = (robot, dx, dy) => {
 };
 
 util.is_open = (robot, x, y) => {
-	if(x < 0 || y < 0 || x >= robot.map.length || y >= robot.map.length) return false;
-	if(robot.map[y][x] && robot.getVisibleRobotMap()[y][x] <= 0) return true;
+	if(util.on_map(robot, {x: x, y: y}) && robot.map[y][x] && robot.getVisibleRobotMap()[y][x] <= 0) return true;
 	return false;
 };
 
@@ -190,11 +189,53 @@ util.close_to_far = (mindist, maxdist) => {
 	return retval;
 };
 
-util.nearest_units = (robot, close_to_far) => {
-	let map = robot.getVisibleRobotMap();
+util.nearest_units = (robot, close_to_far, map=undefined) => {
+	if (map === undefined) {
+		map = robot.getVisibleRobotMap();
+	}
 	let retval = {friendlies: [], enemies: [], nearest_enemy_attacker: undefined, signaling_enemies: []};
 	close_to_far.forEach( (dir) => {
 		let abs = {x: robot.me.x + dir.x, y: robot.me.y+dir.y};
+		if ((abs.x < 0) || (abs.x >= robot.map_s_x) || (abs.y < 0) || (abs.y >= robot.map_s_x)) {
+			return;
+		}
+		if (map[abs.y][abs.x] > 0) {
+			let looking_at = robot.getRobot(map[abs.y][abs.x]);
+			if (looking_at.team !== robot.me.team) {
+				retval.enemies.push({dx: dir.x, dy: dir.y, robot: looking_at});
+				if (retval.nearest_enemy_attacker === undefined) {
+					if ((looking_at.unit === SPECS.CASTLE) || (looking_at.unit === SPECS.PREACHER) || (looking_at.unit === SPECS.CRUSADER) || (looking_at.unit === SPECS.PROPHET)) {
+						retval.nearest_enemy_attacker = {dx: dir.x, dy: dir.y, robot: looking_at};
+						robot.log("Found nearest enemy attacker!");
+						robot.log(retval.nearest_enemy_attacker);
+					}
+				}
+				if (robot.isRadioing(looking_at)) {
+					signaling_enemies.push({dx: dir.x, dy: dir.y, robot: looking_at});
+				}
+			}
+			else {
+				retval.friendlies.push({dx: dir.x, dy: dir.y, robot: looking_at});
+			}
+		}
+	} );
+	return retval;
+};
+
+util.best_AOE_target = (robot, close_to_far, loc=undefined, map=undefined) => {
+	if (map === undefined) {
+		map = robot.getVisibleRobotMap();
+	}
+	if (loc === undefined) {
+		loc = {x: robot.me.x, y: robot.me.y};
+	}
+	let retval = {targets: [], best_target: undefined};
+	close_to_far.forEach( (dir) => {
+		let damage = 0;
+		for (var d of DIRECTIONS)  {
+			let abs = {x: loc.x + dir.x + d[0], y: loc.y+dir.y};
+
+		}
 		if ((abs.x < 0) || (abs.x >= robot.map_s_x) || (abs.y < 0) || (abs.y >= robot.map_s_x)) {
 			return;
 		}

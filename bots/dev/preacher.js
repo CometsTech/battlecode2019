@@ -142,6 +142,9 @@ function set_commander(self) {
 }
 
 function turn_attack(self) {
+	if (self.nearest.nearest_enemy_attacker === undefined) {
+		near_worker = self.enemies[0];
+	}
 	return;
 }
 function turn_turtle(self) {
