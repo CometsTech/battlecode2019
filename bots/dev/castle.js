@@ -79,11 +79,9 @@ function turn_defend(self){
 
 function turn_attack(self){
 	// TODO FIX @AADITYA
+	var to_build = SPECS.PREACHER
 	if(self.me.turn < 40){
 		to_build = SPECS.CRUSADER;
-	}
-	else {
-		to_build = SPECS.PREACHER
 	}
 	return rand_build(self, to_build, self.availableDirections)
 }
