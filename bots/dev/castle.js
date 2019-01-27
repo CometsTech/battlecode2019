@@ -124,7 +124,8 @@ function turn_turtle(self){
     }
     else {
     	return try_build;
-    }}
+    }
+}
 
 function turn_defend(self){
 	// TODO broadcast relevant signal to turtle about killing radio-ing enemies
