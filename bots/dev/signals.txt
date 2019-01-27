@@ -12,3 +12,5 @@ CASTLE TALK:
 		4
 		5
 		correspond to the respective unit type
+
+Creator/building broadcasts:

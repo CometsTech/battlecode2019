@@ -7,6 +7,10 @@ const TURTLING = 1;
 const COMMANDED = 2;
 const CHARGING = 3;
 
+const ADJACENTS = [[1, 0], [0, 1], [-1, 0], [0, -1]];
+const DIAGONALS = [[1, 1], [1, -1], [-1, 1], [-1, -1]]
+const STRAIGHTS = [[2, 0], [0, 2], [-2, 0], [0, -2]];
+
 var preacher = {};
 preacher.init = (self) => {
 	self.log("Initializing preacher");
@@ -21,6 +25,7 @@ preacher.init = (self) => {
 		if ((robot.unit === SPECS.CASTLE) || (robot.unit === SPECS.CHURCH)) {
 			self.creator_id = robot.id;
 			self.creator = robot;
+			self.turtle_radius = (robot.unit === SPECS.CASTLE) ? 4 : 2;
 		}
 	}
 	if (self.creator === undefined) {
@@ -161,9 +166,81 @@ function turn_attack(self) {
 	}
 	return turn_turtle(self);
 }
+
 function turn_turtle(self) {
-	return;
+	let myd = dist_from_creator(self, self.me);
+	let dir_from_creator = [self.creator.x-self.me.x, self.creator.y-self.me.y];
+	// let move_outwards = (myd === 1);
+
+	// self.friendlies.forEach((friend) => {
+	// 	let friend_dir = [self.creator.x-friend.x, self.creator.y-friend.y];
+	// 	if (dotproduct(friend_dir, dir_from_creator) > 0 && util.between(1,2,myd - dist_from_creator(self, friend))) {
+	// 		move_outwards = true;
+	// 	}
+	// });
+	move_outwards = (myd < self.turtle_radius);
+
+	if (move_outwards) {
+		let possible_dirs = []
+		for (var d of [].concat(DIAGONALS, STRAIGHTS)) {
+			let dest = {x:self.me.x+d[0], y:self.me.y+d[1]};
+			if (dist_from_creator(self, dest) > myd && self.karbonite_map[dest.y][dest.x] === false) {
+				possible_dirs.push(d);
+			}
+		}
+		possible_dirs = util.rand_shuffle(possible_dirs);
+		for (var d of possible_dirs) {
+			if (util.can_move(self, d[0], d[1])) {
+				return self.move(d[0], d[1]);
+			}
+		}
+	}
+
+	// with some probability (tunable) move sideways
+	if (Math.random() < 0.2) {
+		let possible_dirs = []
+		for (var d of STRAIGHTS) {
+			if (dist_from_creator(self, {x:self.me.x+d[0], y:self.me.y+d[1]}) === myd) {
+				possible_dirs.push(d);
+			}
+		}
+		possible_dirs = util.rand_shuffle(possible_dirs);
+		for (var d of possible_dirs) {
+			if (util.can_move(self, d[0], d[1])) {
+				return self.move(d[0], d[1]);
+			}
+		}
+	}
 }
+
+function dotproduct(a,b) {
+	var n = 0, lim = Math.min(a.length,b.length);
+	for (var i = 0; i < lim; i++) n += a[i] * b[i];
+	return n;
+ }
+
+function dist_from_creator(self, robot) {
+	let comp_loc = self.creator;
+	if (robot.x+robot.y %2 !== 0) {
+		comp_loc = find_closest(self.creator, self.me);
+	}
+	let loc = [robot.x - comp_loc.x, robot.y - comp_loc.y];
+	return Math.abs(dotproduct(loc, [1, 1])/2)+Math.abs(dotproduct(loc, [1, -1])/2)
+}
+
+function find_closest(loc_start, robot) {
+	let retval = [0, 0];
+	let mindist = util.squared_distance(robot, {x: loc_start.x, y: loc_start.y});
+	for (var d of ADJACENTS) {
+		let cur = util.squared_distance(robot, {x: loc_start.x+d[0], y: loc_start.y+d[1]});
+		if (cur < mindist) {
+			retval = d;
+			mindist = cur;
+		}
+	}
+	return {x: loc_start.x+retval[0], y: loc_start.y+retval[1]};
+}
+
 function turn_follow_orders(self) {
 	return;
 }
