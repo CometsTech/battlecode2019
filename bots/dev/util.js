@@ -80,7 +80,7 @@ util.can_buildUnit = (robot, unit, dx, dy, override_savings=0) => {
 	return (util.is_open(robot, robot.me.x+dx, robot.me.y+dy) &&
 		robot.karbonite > SPECS.UNITS[unit].CONSTRUCTION_KARBONITE + min_karb&&
 		robot.fuel > SPECS.UNITS[unit].CONSTRUCTION_FUEL + min_fuel&&
-		robot.map[robot.me.x+dx][robot.me.y+dy] && dx*dx + dy*dy <= 2);
+		robot.map[robot.me.y+dy][robot.me.x+dx] && dx*dx + dy*dy <= 2);
 };
 
 util.can_mine = (robot) => {
@@ -97,7 +97,7 @@ util.can_move = (robot, dx, dy) => {
 };
 
 util.is_open = (robot, x, y) => {
-	if(x < 0 || y < 0 || x >= robot.map.length || y >= robot.map.length) return false;
+	if(!util.on_map(robot, {x: x, y: y})) return false;
 	if(robot.map[y][x] && robot.getVisibleRobotMap()[y][x] <= 0) return true;
 	return false;
 };
@@ -150,6 +150,35 @@ util.bfs = (robot, pos_list) => {
 	}
 	while (path_q.length > 0){
 		let pos = path_q.shift();
+		for (let i = 0; i < robot.diff_list.length; i++) {
+			let p = util.add_pos(pos, robot.diff_list[i]);
+			let p_d = pathing_map[pos.y][pos.x] + 1;
+			if (util.on_map(robot, p) && robot.map[p.y][p.x] && p_d < pathing_map[p.y][p.x]) {
+				pathing_map[p.y][p.x] = p_d;
+				path_q.push(p);
+			}
+		}
+	}
+	return pathing_map;
+};
+
+util.get_is_pos = (p) => {
+	return a => a.x === p.x && a.y === p.y;
+};
+
+util.bfs_limited = (robot, pos_list, is_target) => {
+	/** like bfs, but if is_target comes out to true, then it'll stop the bfs there. There should be only one target*/
+	let pathing_map = util.make_array(max_dist, [robot.map_s_y, robot.map_s_x]);
+	let path_q = []; // apparently javascript copy is weird
+	for (let i = 0; i < pos_list.length; i++){
+		path_q.push(pos_list[i]);
+		pathing_map[pos_list[i].y][pos_list[i].x] = 0;
+	}
+	while (path_q.length > 0){
+		let pos = path_q.shift();
+		if (is_target(pos)){
+			return pathing_map;
+		}
 		for (let i = 0; i < robot.diff_list.length; i++) {
 			let p = util.add_pos(pos, robot.diff_list[i]);
 			let p_d = pathing_map[pos.y][pos.x] + 1;
@@ -350,7 +379,7 @@ util.pilgrim_make_tree = (self, loc_list) => {
 				node_dists[f.i] = node_dists[e.i] + f.d;
 				tree_info[f.i].parent = e.i; // note that parent can be overwritten a few times
 				tree_info[f.i].distance = node_dists[f.i];
-				tree_info[f.i].node_weight = 1 / node_dists[f.i];
+				// tree_info[f.i].node_weight = 1 / node_dists[f.i];
 				q.push({val: node_dists[f.i], i: f.i});
 			}
 		}
@@ -413,6 +442,10 @@ util.pilgrim_make_tree = (self, loc_list) => {
 	}
 	return {tree_info: tree_info, voronoi_dist: voronoi_dist, voronoi_id: voronoi_id, child_dists: child_dists};
 };
+
+util.pos_eq = (a, b) => {
+	return a.x === b.x && a.y === b.y;
+}
 
 util.get_tree_dist = (self, p) => {
 	/* Gets the distance associated with the location p.x, p.y to the node p.i*/
