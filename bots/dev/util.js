@@ -68,11 +68,15 @@ util.can_attack = (robot, dx, dy) => {
 	return false;
 };
 
-util.can_buildUnit = (robot, unit, dx, dy) => {
+util.can_buildUnit = (robot, unit, dx, dy, override_savings=0) => {
 	// let min_karb = Math.min(robot.me.turn, 50);
 	// let min_fuel = Math.min(robot.me.turn * 4, 200);
 	let min_karb = 50;
 	let min_fuel = 200;
+	if (Math.random() < override_savings) {
+		min_karb = 0;
+		min_fuel = 0;
+	}
 	return (util.is_open(robot, robot.me.x+dx, robot.me.y+dy) &&
 		robot.karbonite > SPECS.UNITS[unit].CONSTRUCTION_KARBONITE + min_karb&&
 		robot.fuel > SPECS.UNITS[unit].CONSTRUCTION_FUEL + min_fuel&&
@@ -199,8 +203,10 @@ util.nearest_units = (robot, close_to_far) => {
 			if (looking_at.team !== robot.me.team) {
 				retval.enemies.push({dx: dir.x, dy: dir.y, robot: looking_at});
 				if (retval.nearest_enemy_attacker === undefined) {
-					if ((robot.me.unit === SPECS.CASTLE) || (robot.me.unit === SPECS.PREACHER) || (robot.me.unit === SPECS.CRUSADER) || (robot.me.unit === SPECS.PROPHET)) {
+					if ((looking_at.unit === SPECS.CASTLE) || (looking_at.unit === SPECS.PREACHER) || (looking_at.unit === SPECS.CRUSADER) || (looking_at.unit === SPECS.PROPHET)) {
 						retval.nearest_enemy_attacker = {dx: dir.x, dy: dir.y, robot: looking_at};
+						robot.log("Found nearest enemy attacker!");
+						robot.log(retval.nearest_enemy_attacker);
 					}
 				}
 				if (robot.isRadioing(looking_at)) {
@@ -213,6 +219,20 @@ util.nearest_units = (robot, close_to_far) => {
 		}
 	} );
 	return retval;
+};
+
+util.closest_direction = (dx, dy) => {
+	var best_dir = [0, 0];
+	let max = 0;
+	let cur = 0;
+	for (var dir of DIRECTIONS) {
+		cur = (dir[0]*dx + dir[1]*dy)/Math.sqrt(dir[0]*dir[0]+dir[1]*dir[1]);
+		if (cur > max) {
+			max = cur;
+			best_dir = dir;
+		}
+	}
+	return {dx: best_dir[0], dy: best_dir[1]}
 };
 
 util.rand_int = (n) => {

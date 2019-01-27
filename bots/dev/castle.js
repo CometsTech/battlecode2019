@@ -20,6 +20,9 @@ castle.init = (self) => {
 	// TODO: tune hyperparameter of 0.6
 	self.target_counts[SPECS.PILGRIM] = Math.ceil( 0.6*  ([].concat.apply([], self.karbonite_map).reduce((total, present) => present ? total + 1 : total)
 														+ [].concat.apply([], self.fuel_map).reduce((total, present) => present ? total + 1 : total)) );
+	
+	self.near_attacker = undefined;
+
 	self.log(self.target_counts);
 };
 
@@ -102,9 +105,57 @@ function turn_turtle(self){
 }
 
 function turn_defend(self){
-	// if (self.nearest.nearest_enemy_attacker === undefined) {
+	// TODO broadcast relevant signal to turtle about killing radio-ing enemies
+	if (self.nearest.nearest_enemy_attacker === undefined) {
+		let near_worker = self.enemies[0];
+		self.log("I see a worker!");
+		self.log(near_worker);
+		if (util.can_attack(self, near_worker.dx, near_worker.dy)) {
+			return self.attack(near_worker.dx, near_worker.dy);
+		}
+		let make_dir = util.closest_direction(near_worker.dx, near_worker.dy);
+		self.log(make_dir);
+		// TODO SET SIGNAL TO TELL CRUSADER TO MOVE IN MAKE DIR AS WELL (to bring it closer to the worker)
+		if (util.can_buildUnit(self, SPECS.CRUSADER, make_dir.dx, make_dir.dy, 0.5)) {
+			return self.buildUnit(SPECS.CRUSADER, make_dir.dx, make_dir.dy);
+		}
+		// if the optimal spot is taken, just build randomly
+		// TOOD make this smarter
+		return rand_build(self, SPECS.CRUSADER, self.availableDirections, 0.4);
+	}
+	else {
+		self.near_attacker = self.nearest.nearest_enemy_attacker;
+		self.log("Must defend myself!");
+		self.log(self.near_attacker);
+		let make_dir = util.closest_direction(self.near_attacker.dx, self.near_attacker.dy);
+		self.log(make_dir);
+		let sqd = util.squared_distance({x: self.near_attacker.dx, y: self.near_attacker.dy}, {x: make_dir.dx, y: make_dir.dy});
+		// If close enough, spawning a preacher/crusader is good defense
+		// TODO SET OVERRIDE SIGNAL TO TELL unit to attack regardless
+		if (sqd <= 16) {
+			self.log("Trying to make unit to defend me.")
+			if (util.can_buildUnit(self, SPECS.PREACHER, make_dir.dx, make_dir.dy, 1)) {
+				return self.buildUnit(SPECS.PREACHER, make_dir.dx, make_dir.dy);
+			}
+			if (util.can_buildUnit(self, SPECS.CRUSADER, make_dir.dx, make_dir.dy, 1)) {
+				return self.buildUnit(SPECS.CRUSADER, make_dir.dx, make_dir.dy);
+			}
+		}
+		// If unit isn't close enough to hit with a powerful unit, try just shooting it with castle
+		if (util.can_attack(self, self.near_attacker.dx, self.near_attacker.dy)) {
+			return self.attack(self.near_attacker.dx, self.near_attacker.dy);
+		}
+		// If unit hasn't entered attack range, but in vision range, build preacher and send after
+		// TODO Check if the unit can actually reach attack range
+		// TODO SET OVERRIDE SIGNAL TO TELL unit to move more
+		else {
+			if (util.can_buildUnit(self, SPECS.PREACHER, make_dir.dx, make_dir.dy)) {
+				return self.buildUnit(SPECS.PREACHER, make_dir.dx, make_dir.dy);
+			}
+			return rand_build(self, SPECS.PREACHER, self.availableDirections, 0.5);
+		}
 
-	// }
+	}
 	return turn_attack(self);
 }
 
@@ -117,10 +168,10 @@ function turn_attack(self){
 	return rand_build(self, to_build, self.availableDirections);
 }
 
-function rand_build(self, unit, dirs){
+function rand_build(self, unit, dirs, override_savings=0){
 	let ok_dirs = [];
 	for (let i = 0; i < dirs.length; i++){
-		if (util.can_buildUnit(self, unit, dirs[i][0], dirs[i][1])){
+		if (util.can_buildUnit(self, unit, dirs[i][0], dirs[i][1], override_savings)){
 			ok_dirs.push(i);
 		}
 	}
