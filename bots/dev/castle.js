@@ -143,10 +143,18 @@ function turn_build_pilgrims(self){
     }
 }
 
-function turn_turtle(self){
-	let try_build = rand_build(self, SPECS.PROPHET, [[-1, -1], [1, -1], [-1, 1], [1, 1]], 0.01);
+function turn_turtle(self, force=false){
+	let unit_to_build = SPECS.PROPHET;
+	if (Math.random() < 0.2 && (force === false)) {
+		let unit_to_build = SPECS.PREACHER;
+	}
+	let try_build = rand_build(self, unit_to_build, [[-1, -1], [1, -1], [-1, 1], [1, 1]], 0.01);
     if (try_build === undefined) {
-    	return turn_build_pilgrims(self);
+    	if (force) {
+    		return;
+    	} else {
+    		turn_turtle(self, true);
+    	}
     }
     else {
     	return try_build;

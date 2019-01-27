@@ -153,16 +153,25 @@ function turn_turtle(self) {
 		return;
 	}*/
 
-	if (self.me.x+self.me.y % 2 !== 0) {
+	let myd = dist_from_creator(self, self.me);
+	let dir_from_creator = [self.creator.x-self.me.x, self.creator.y-self.me.y];
+	self.log("Distance from creator: " + dir_from_creator);
+	let mod = ((dir_from_creator[0]+dir_from_creator[1]) % 2);
+	self.log(mod);
+	let move_outwards = (myd === 1);
+
+	if (mod !== 0) {
+		self.log("NOT ON GRID PROPERLY... Fixing by moving to:");
 		// In this case we need to readjust the position to return to the checkerboard
 		for (var d of ADJACENTS) {
-			if (util.can_move(self, d[0], d[1])) {
+			if (util.can_move(self, d[0], d[1]) && util.squared_distance(self.creator, self.me) < self.turtle_radius*self.turtle_radius) {
+				self.log(d);
 				return self.move(d[0], d[1]);
 			}
 		}
 		self.log("I am very sad and in the wrong spot and surroudned PLS SEND HELP.");
 		if (Math.random() < 0.3 && util.squared_distance(self.creator, self.me) < self.turtle_radius*self.turtle_radius) {
-			for (var d of util.rand_shuffle(DIRECTIONS)) {
+			for (var d of util.rand_shuffle(DIAGONALS)) {
 				if (util.can_move(self, d[0], d[1])) {
 					return self.move(d[0], d[1]);
 				}
@@ -170,10 +179,6 @@ function turn_turtle(self) {
 		}
 		return;
 	}
-
-	let myd = dist_from_creator(self, self.me);
-	let dir_from_creator = [self.creator.x-self.me.x, self.creator.y-self.me.y];
-	let move_outwards = (myd === 1);
 
 	self.friendlies.forEach((friend) => {
 		let friend_dir = [self.creator.x-friend.x, self.creator.y-friend.y];
@@ -187,7 +192,7 @@ function turn_turtle(self) {
 		let possible_dirs = []
 		for (var d of DIAGONALS) {
 			let dest = {x:self.me.x+d[0], y:self.me.y+d[1]};
-			if (dist_from_creator(self, dest) > myd && self.karbonite_map[dest.y][dest.x] === false) {
+			if (dist_from_creator(self, dest) > myd && util.on_map(self, dest) && self.karbonite_map[dest.y][dest.x] === false) {
 				possible_dirs.push(d);
 			}
 		}
