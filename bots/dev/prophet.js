@@ -5,8 +5,10 @@ var prophet = {};
 
 const max_dist = 100000;
 
-const DIAGONALS = [[1, 1], [1, -1], [-1, 1], [-1, -1]]
+const DIAGONALS = [[1, 1], [1, -1], [-1, 1], [-1, -1]];
 const STRAIGHTS = [[2, 0], [0, 2], [-2, 0], [0, -2]];
+const ADJACENTS = [[1, 0], [0, 1], [-1, 0], [0, -1]];
+
 
 const TURTLING = 0;
 const CHARGING = 1;
@@ -75,7 +77,9 @@ prophet.init = (self) => {
 
 
 
-	// TOOD ELAINE WRITE INITIALIZE CODE HERE
+	self.is_commander = false;
+
+	// Turtle initialization code
 	self.state = TURTLING;
 	self.creator = undefined;
 	self.creator_id = undefined;
@@ -83,7 +87,7 @@ prophet.init = (self) => {
 		if ((robot.unit === SPECS.CASTLE) || (robot.unit === SPECS.CHURCH)) {
 			self.creator_id = robot.id;
 			self.creator = robot;
-			self.turtle_radius = (robot.unit === SPECS.CASTLE) ? 4 : 2
+			self.turtle_radius = (robot.unit === SPECS.CASTLE) ? 4 : 2;
 		}
 	}
 	if (self.creator_id === undefined) {
@@ -106,16 +110,16 @@ prophet.turn = (self) => {
 	self.attackable_enemies = []; // contains duplicates
 	self.nearest.signaling_enemies.forEach((enemy) => {
 		if (util.between(SPECS.UNITS[SPECS.PROPHET].ATTACK_RADIUS[0], SPECS.UNITS[SPECS.PROPHET].ATTACK_RADIUS[1], util.squared_distance({x:enemy.dx, y:enemy.dy}, {x: 0, y: 0}))) {
-			self.attackable_enemies.push(enemy)
+			self.attackable_enemies.push(enemy);
 		}
 	});
 	self.enemies.forEach((enemy) => {
 		if (util.between(SPECS.UNITS[SPECS.PROPHET].ATTACK_RADIUS[0], SPECS.UNITS[SPECS.PROPHET].ATTACK_RADIUS[1], util.squared_distance({x:enemy.dx, y:enemy.dy}, {x: 0, y: 0}))) {
-			self.attackable_enemies.push(enemy)
+			self.attackable_enemies.push(enemy);
 		}
 	});
 
-	var new_state = TURTLING
+	var new_state = TURTLING;
 
 	// add code to adjust state... 
 	// TODO if creator died all prophets in turtle should change to charging mode
@@ -148,9 +152,33 @@ function turn_turtle(self) {
 	/*if (util.is_open(self, robot.x+1, robot.y+1) || util.is_open(self, robot.x+1, robot.y-1) ||util.is_open(self, robot.x-1, robot.y+1) ||util.is_open(self, robot.x-1, robot.y-1)){
 		return;
 	}*/
+
 	let myd = dist_from_creator(self, self.me);
 	let dir_from_creator = [self.creator.x-self.me.x, self.creator.y-self.me.y];
+	self.log("Distance from creator: " + dir_from_creator);
+	let mod = ((dir_from_creator[0]+dir_from_creator[1]) % 2);
+	self.log(mod);
 	let move_outwards = (myd === 1);
+
+	if (mod !== 0) {
+		self.log("NOT ON GRID PROPERLY... Fixing by moving to:");
+		// In this case we need to readjust the position to return to the checkerboard
+		for (var d of ADJACENTS) {
+			if (util.can_move(self, d[0], d[1]) && util.squared_distance(self.creator, self.me) < self.turtle_radius*self.turtle_radius) {
+				self.log(d);
+				return self.move(d[0], d[1]);
+			}
+		}
+		self.log("I am very sad and in the wrong spot and surroudned PLS SEND HELP.");
+		if (Math.random() < 0.3 && util.squared_distance(self.creator, self.me) < self.turtle_radius*self.turtle_radius) {
+			for (var d of util.rand_shuffle(DIAGONALS)) {
+				if (util.can_move(self, d[0], d[1])) {
+					return self.move(d[0], d[1]);
+				}
+			}
+		}
+		return;
+	}
 
 	self.friendlies.forEach((friend) => {
 		let friend_dir = [self.creator.x-friend.x, self.creator.y-friend.y];
@@ -163,7 +191,8 @@ function turn_turtle(self) {
 	if (move_outwards) {
 		let possible_dirs = []
 		for (var d of DIAGONALS) {
-			if (dist_from_creator(self, {x:self.me.x+d[0], y:self.me.y+d[1]}) > myd) {
+			let dest = {x:self.me.x+d[0], y:self.me.y+d[1]};
+			if (dist_from_creator(self, dest) > myd && util.on_map(self, dest) && self.karbonite_map[dest.y][dest.x] === false) {
 				possible_dirs.push(d);
 			}
 		}
