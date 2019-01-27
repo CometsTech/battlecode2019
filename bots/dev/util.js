@@ -123,7 +123,7 @@ util.between = (min, max, num) => {
 }
 
 util.close_to_far = (mindist, maxdist) => {
-	max1d = Math.ceil(Math.sqrt(dist));
+	let max1d = Math.ceil(Math.sqrt(maxdist));
 	let retval = [];
 	for (let i = 1; i <= max1d; i++) {
 		if (util.between(mindist, maxdist, i*i)) {

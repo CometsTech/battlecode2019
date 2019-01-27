@@ -14,6 +14,7 @@ const TARGET_WORKERS = 10;
 castle.init = (self) => {
 	self.log("Start of game");
 	self.visible_close_to_far = util.close_to_far(1, SPECS.UNITS[SPECS.CASTLE].VISION_RADIUS);
+	self.log(SPECS.UNITS[SPECS.CASTLE].VISION_RADIUS);
 	self.attack_close_to_far = util.close_to_far(SPECS.UNITS[SPECS.CASTLE].VISION_RADIUS[0], SPECS.UNITS[SPECS.CASTLE].VISION_RADIUS[1]);
 	self.state = BUILDING_WORKERS;
 	self.turtle_constructed = false;
@@ -23,7 +24,7 @@ castle.init = (self) => {
 // TODO: degenerate cases where u should insta attack enemy castle
 castle.turn = (self) => {
 	self.log("Castle health: " + self.me.health + " on turn " + self.me.turn + " with time " + self.me.time);
-	self.log(self.visible_close_to_far);
+	// self.log(self.visible_close_to_far[0]);
 
 	self.availableDirections = util.find_open_adjacents(self);
 	self.nearest_enemies = util.nearest_enemies(self, self.attack_close_to_far);
@@ -36,7 +37,7 @@ castle.turn = (self) => {
 		new_state = BUILDING_WORKERS;
 	}
 	// Note the 0.99 heuristic is to permit not *always* defending... perhaps use another metric
-	if ((nearest_enemies.length > 0) && (self.turtle_constructed === false) && (Math.random() < 0.99)) {
+	if ((self.nearest_enemies.length > 0) && (self.turtle_constructed === false) && (Math.random() < 0.99)) {
 		new_state = DEFENDING;
 	}
 
