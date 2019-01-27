@@ -33,6 +33,8 @@ preacher.init = (self) => {
 	}
 	self.state = TURTLING;
 	self.command_signal = undefined;
+	self.at_turtle_edge = false;
+	self.partners = undefined;
 };
 
 preacher.turn = (self) => {
@@ -196,7 +198,7 @@ function turn_turtle(self) {
 
 	let move_outwards = (myd < self.turtle_radius);
 
-	if (move_outwards) {
+	if (move_outwards && (self.at_turtle_edge === false)) {
 		let possible_dirs = []
 		for (var d of [].concat(DIAGONALS, STRAIGHTS)) {
 			let dest = {x:self.me.x+d[0], y:self.me.y+d[1]};
@@ -210,23 +212,90 @@ function turn_turtle(self) {
 				return self.move(d[0], d[1]);
 			}
 		}
-	}
-
-	// with some probability (tunable) move sideways
-	if (Math.random() < 0.2) {
-		let possible_dirs = []
-		for (var d of STRAIGHTS) {
-			if (dist_from_creator(self, {x:self.me.x+d[0], y:self.me.y+d[1]}) === myd) {
-				possible_dirs.push(d);
+		if (Math.random() < 0.2) {
+			let possible_dirs = []
+			for (var d of STRAIGHTS) {
+				if (dist_from_creator(self, {x:self.me.x+d[0], y:self.me.y+d[1]}) === myd) {
+					possible_dirs.push(d);
+				}
 			}
-		}
-		possible_dirs = util.rand_shuffle(possible_dirs);
-		for (var d of possible_dirs) {
-			if (util.can_move(self, d[0], d[1])) {
-				return self.move(d[0], d[1]);
+			possible_dirs = util.rand_shuffle(possible_dirs);
+			for (var d of possible_dirs) {
+				if (util.can_move(self, d[0], d[1])) {
+					return self.move(d[0], d[1]);
+				}
 			}
 		}
 	}
+	else {
+		self.at_turtle_edge = true;
+		let move_prob = 0.2;
+		if (self.partner === undefined) {
+			self.friendlies.forEach((robot_info) => {
+				if (robot_info.robot.unit === SPECS.PREACHER) {
+					if (dist_from_creator(self, robot_info.robot) === self.turtle_radius && self.isRadioing(robot_info.robot)) {
+						if (robot_info.robot.signal === self.me.id) {
+							self.partner = {robot_id: robot_info.robot.id, confirmed: true};
+						}
+						self.log("Found a confirmed partner, signalling to him: " + robot_info.robot.id)
+						self.signal(robot_info.robot.id, Math.pow(util.radius(robot_info.dx, robot_info.dy), 2))
+						return;
+					}
+				}
+			});
+			self.friendlies.forEach((robot_info) => {
+				if (robot_info.robot.unit === SPECS.PREACHER) {
+					if (dist_from_creator(self, robot_info.robot) === self.turtle_radius) {
+						self.partner = {robot_id: robot_info.robot.id, confirmed: false};
+						self.log("Found partner, signalling to him: " + robot_info.robot.id)
+						self.signal(robot_info.robot.id, Math.pow(util.radius(robot_info.dx, robot_info.dy), 2))
+						return;
+					}
+				}
+			});
+		}
+		else {
+			if (self.partner.confirmed) {
+				return;
+			}
+			else {
+				let partner_bot = self.getRobot(self.partner.robot_id);
+				self.log("Checking to see if my partner has picked me.");
+				if (partner_bot === null) {
+					self.log("I lost my partner now i'm sad.");
+					self.partner = undefined;
+				}
+				if (self.isRadioing(partner_bot)) {
+					if (partner_bot.signal === self.me.id) {
+						self.partner.confirmed = true;
+						self.log("My partner picked me!")
+						self.signal(self.me.id, Math.pow(util.radius(partner_bot.x-self.me.x, partner_bot.y-self.me.y), 2));
+						return;
+					}
+					else {
+						self.log("My partner picked someone else :(").
+						self.partner === undefined;
+						move_prob = 1;
+					}
+				}
+			}
+		}
+		if (self.partner === undefined && Math.random() < move_prob) {
+			let possible_dirs = []
+			for (var d of STRAIGHTS) {
+				if (dist_from_creator(self, {x:self.me.x+d[0], y:self.me.y+d[1]}) === myd) {
+					possible_dirs.push(d);
+				}
+			}
+			possible_dirs = util.rand_shuffle(possible_dirs);
+			for (var d of possible_dirs) {
+				if (util.can_move(self, d[0], d[1])) {
+					return self.move(d[0], d[1]);
+				}
+			}
+		}
+	}
+	return;
 }
 
 function dotproduct(a,b) {
