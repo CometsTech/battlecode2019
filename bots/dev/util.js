@@ -251,7 +251,7 @@ util.nearest_units = (robot, close_to_far, map=undefined) => {
 	return retval;
 };
 
-util.best_AOE_target = (robot, close_to_far, loc=undefined, map=undefined) => {
+util.best_AOE_target = (robot, close_to_far, map=undefined, loc=undefined) => {
 	if (map === undefined) {
 		map = robot.getVisibleRobotMap();
 	}
@@ -259,33 +259,45 @@ util.best_AOE_target = (robot, close_to_far, loc=undefined, map=undefined) => {
 		loc = {x: robot.me.x, y: robot.me.y};
 	}
 	let retval = {targets: [], best_target: undefined};
+	let max_damage = 0;
 	close_to_far.forEach( (dir) => {
 		let damage = 0;
-		for (var d of DIRECTIONS)  {
-			let abs = {x: loc.x + dir.x + d[0], y: loc.y+dir.y};
-
-		}
+		let abs = {x: loc.x + dir.x, y: loc.y+dir.y};
+		let abs_damage = 20;
 		if ((abs.x < 0) || (abs.x >= robot.map_s_x) || (abs.y < 0) || (abs.y >= robot.map_s_x)) {
 			return;
 		}
 		if (map[abs.y][abs.x] > 0) {
 			let looking_at = robot.getRobot(map[abs.y][abs.x]);
-			if (looking_at.team !== robot.me.team) {
-				retval.enemies.push({dx: dir.x, dy: dir.y, robot: looking_at});
-				if (retval.nearest_enemy_attacker === undefined) {
-					if ((looking_at.unit === SPECS.CASTLE) || (looking_at.unit === SPECS.PREACHER) || (looking_at.unit === SPECS.CRUSADER) || (looking_at.unit === SPECS.PROPHET)) {
-						retval.nearest_enemy_attacker = {dx: dir.x, dy: dir.y, robot: looking_at};
-						robot.log("Found nearest enemy attacker!");
-						robot.log(retval.nearest_enemy_attacker);
-					}
-				}
-				if (robot.isRadioing(looking_at)) {
-					signaling_enemies.push({dx: dir.x, dy: dir.y, robot: looking_at});
-				}
+			if (looking_at.unit === SPECS.PROPHET) {
+				abs_damage += 10;
 			}
-			else {
-				retval.friendlies.push({dx: dir.x, dy: dir.y, robot: looking_at});
+			if (looking_at.unit === SPECS.CASTLE || looking_at.unit === SPECS.CHURCH) {
+				abs_damage += 5;
 			}
+			damage = (looking_at.team !== robot.me.team) ? damage+abs_damage : damage - abs_damage;
+		}
+		for (var d of DIRECTIONS)  {
+			abs = {x: loc.x + dir.x + d[0], y: loc.y+dir.y + d[1]};
+			if ((abs.x < 0) || (abs.x >= robot.map_s_x) || (abs.y < 0) || (abs.y >= robot.map_s_x)) {
+				continue;
+			}
+			abs_damage = 20;
+			if (map[abs.y][abs.x] > 0) {
+				let looking_at = robot.getRobot(map[abs.y][abs.x]);
+				if (looking_at.unit === SPECS.PROPHET) {
+					abs_damage += 10;
+				}
+				if (looking_at.unit === SPECS.CASTLE || looking_at.unit === SPECS.CHURCH) {
+					abs_damage += 5;
+				}
+				damage = (looking_at.team !== robot.me.team) ? damage+abs_damage : damage - abs_damage;
+			}
+		}
+		retval.targets.push({dx: dir.x, dy: dir.y, damage: damage});
+		if (damage > max_damage) {
+			retval.best_target = {dx: dir.x, dy: dir.y};
+			max_damage = damage;
 		}
 	} );
 	return retval;

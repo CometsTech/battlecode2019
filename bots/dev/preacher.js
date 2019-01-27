@@ -84,7 +84,8 @@ preacher.turn = (self) => {
 		}
 	}
 
-	self.nearest = util.nearest_units(self, self.close_to_far);
+	self.vismap = self.getVisibleRobotMap();
+	self.nearest = util.nearest_units(self, self.close_to_far, self.vismap);
 	self.friendlies = self.nearest.friendlies;
 	self.enemies = self.nearest.enemies;
 	var new_state = TURTLING;
@@ -142,10 +143,23 @@ function set_commander(self) {
 }
 
 function turn_attack(self) {
-	if (self.nearest.nearest_enemy_attacker === undefined) {
-		near_worker = self.enemies[0];
+	if (self.time < 10) {
+		self.log("Not much time so hitting furthest target to avoid seppuku.")
+		if (util.can_attack(self, self.enemies[self.enemies.length-1].dx, self.enemies[self.enemies.length-1].dy)) {
+			return self.attack(self.enemies[self.enemies.length-1].dx, self.enemies[self.enemies.length-1].dy);
+		}
 	}
-	return;
+	let targets = util.best_AOE_target(self, self.close_to_far, self.vismap);
+	if (targets.best_target === undefined) {
+		self.log("This is quite sad I can't shoot and net damage my opponent. I will turtle")
+	}
+	else {
+		if (util.can_attack(self, targets.best_target.dx, targets.best_target.dy)) {
+			return self.attack(targets.best_target.dx, targets.best_target.dy);
+		}
+		self.log("I cannot attack and am very sad. I will turtle instead.")
+	}
+	return turn_turtle(self);
 }
 function turn_turtle(self) {
 	return;
