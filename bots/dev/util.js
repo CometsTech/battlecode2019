@@ -328,6 +328,27 @@ util.rand_int = (n) => {
 	return Math.floor(n * Math.random());
 };
 
+util.rand_shuffle = (array) => {
+
+	var currentIndex = array.length;
+	var temporaryValue, randomIndex;
+
+	// While there remain elements to shuffle...
+	while (0 !== currentIndex) {
+		// Pick a remaining element...
+		randomIndex = Math.floor(Math.random() * currentIndex);
+		currentIndex -= 1;
+
+		// And swap it with the current element.
+		temporaryValue = array[currentIndex];
+		array[currentIndex] = array[randomIndex];
+		array[randomIndex] = temporaryValue;
+	}
+
+	return array;
+
+};
+
 util.rand_weight = (a) => {
 	let tot = 0;
 	for (let i = 0; i < a.length; i++){

@@ -28,6 +28,8 @@ castle.init = (self) => {
 	self.near_attacker = undefined;
 
 	self.log(self.target_counts);
+
+	self.turtle_radius = 4;
 };
 
 // TODO: degenerate cases where u should insta attack enemy castle
