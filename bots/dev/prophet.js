@@ -75,10 +75,7 @@ prophet.init = (self) => {
 
 	// TOOD ELAINE WRITE INITIALIZE CODE HERE
 	self.state = TURTLING;
-	// You probably want to  initialize a list of locations describing the turtle formation relative to the castle's position
-	// Then, every turn, you can get the location of the castle, and pick locations accordingly
-	// Alternatively just like always have profits move outwards, but  not go more than 2 diagonally further from an existing  prophet
-	// Also ensure that they  are checkerboard  with their nearest prophets... then u should get some emergent turtling behavior
+	
 };
 
 prophet.turn = (self) => {
@@ -101,9 +98,38 @@ prophet.turn = (self) => {
 			break;
 	}
 };
+
+//turtle with max radius 3
 function turn_turtle(self) {
-	// TODO Elaine add code here
-	return; // Return an  action, prolly  gonna be movement
+
+	//if no enemies nearby, form turtle
+	var visibleRobots = self.getVisibleRobots();
+	for(var robot of visibleRobots){
+		if(robot.unit == 0 && robot.team == self.me.team){
+			var dx = robot.x - self.me.x, dy = robot.y - self.me.y;
+			var x_dir = -Math.sign(dx)
+			var y_dir = -Math.sign(dy)
+			if (Math.abs(dx) <= 3 || Math.abs(dy) <= 3){
+				if (util.can_move(self, x_dir, y_dir)){
+					return self.move(x_dir, y_dir);
+				}
+			}
+			else {
+				if (util.can_move(self, 2*x_dir, 0)){
+					return self.move(2*x_dir, 0);
+				}
+				if (util.can_move(self, 0, 2*y_dir)){
+					return self.move(0, 2*y_dir);
+				}
+				if (util.can_move(self, -2*x_dir, 0)){
+					return self.move(-2*x_dir, 0);
+				}
+				if (util.can_move(self, 0, -2*y_dir)){
+					return self.move(0, -2*y_dir);
+				}
+			}
+		}
+	}
 }
 
 function turn_not_turtling(self) {
@@ -111,7 +137,7 @@ function turn_not_turtling(self) {
 	var visibleRobots = self.getVisibleRobots();
 	for(var robot of visibleRobots){
 		if(robot.team != self.me.team){
-			self.log("Prohet found enemy");
+			self.log("Prophet found enemy");
 			var dx = robot.x - self.me.x, dy = robot.y - self.me.y;
 			if(util.can_attack(self, dx, dy)){
 				self.log("Prophet attacking");

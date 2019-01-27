@@ -90,8 +90,14 @@ function turn_build_pilgrims(self){
 }
 
 function turn_turtle(self){
-	// TODO ELAINE PUT CODE HERE
-	return;
+	var d = [-1, 1];
+	while (false) {
+		let dx = d[Math.round(Math.random())];
+		let dy = d[Math.round(Math.random())];
+		if (util.can_buildUnit(self, SPECS.PROPHET, dx, dy)){
+			return self.buildUnit(SPECS.PROPHET, dx, dy);
+		}
+	}
 }
 
 function turn_defend(self){
