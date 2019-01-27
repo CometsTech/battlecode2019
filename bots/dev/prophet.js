@@ -115,32 +115,59 @@ function turn_turtle(self) {
 				return;
 			}
 
+			//Calculate which direction to move out diagonally
+
 			var dx = robot.x - self.me.x, dy = robot.y - self.me.y;
 			var x_dir = -Math.sign(dx)
 			var y_dir = -Math.sign(dy)
 
-			//Move out from castle diagonally
-			if (distance(dx, dy) < 3){
+			//Move out from castle diagonally if already one away.
+			//If not possible, then move diagonally in other directions.
+			if (Math.abs(dx) === 1 && Math.abs(dy) === 1){
 				if (util.can_move(self, x_dir, y_dir)){
 					return self.move(x_dir, y_dir);
 				}
-			}
+				else{
+					//Calculate possible directions can move in other than directly diagonal from castle
+					let dirs = []
+					for (var i = -1; i <= 1; i = i + 2) {
+						for (var k = -1; k <= 1; k = k + 2) {
+							if (dotproduct([i, k], [x_dir, y_dir]) === 0){
+								dirs.push([i, k]);
+							}
+						}
+					}
+					//Move in one of those directions
+					for (var i in dirs){
+						if (util.can_move(self, i[0], i[1])){
+							return self.move(i[0], i[1]);
+						}
+					}	
+				}
+			} 
+
 			//Move to the side
-			else {
-				if (Math.abs(dx) === 3 && Math.abs(dy) === 3){
+			/*else {
+				if (Math.abs(dx) === 2 && Math.abs(dy) === 2){
 					return;
 				}
-				if (util.can_move(self, -2*x_dir, 0) && Math.abs(dx) <= 3 || Math.abs(dy) <= 3){
+				if (util.can_move(self, -2*x_dir, 0) && Math.abs(dx) <= 2 || Math.abs(dy) <= 2){
 					return self.move(-2*x_dir, 0);
 				}
-				if (util.can_move(self, 0, -2*y_dir) && Math.abs(dx) <=3 || Math.abs(dy) <= 3){
+				if (util.can_move(self, 0, -2*y_dir) && Math.abs(dx) <=2 || Math.abs(dy) <= 2){
 					return self.move(0, -2*y_dir);
 				}
 				
-			}
+			}*/
 		}
 	}
 }
+
+function dotproduct(a,b) {
+	var n = 0, lim = Math.min(a.length,b.length);
+	for (var i = 0; i < lim; i++) n += a[i] * b[i];
+	return n;
+ }
 
 function distance(a, b) {
   var farthest = 0
