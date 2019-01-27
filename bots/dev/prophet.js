@@ -138,6 +138,7 @@ function turn_turtle(self) {
 
 	for (let i = 0; i < self.attackable_enemies.length; i++) {
 		if (util.can_attack(self, self.attackable_enemies[i].dx, self.attackable_enemies[i].dy)) {
+			self.log("TURTLE ATTACK!");
 			return self.attack(self.attackable_enemies[i].dx, self.attackable_enemies[i].dy);
 		}
 	}
