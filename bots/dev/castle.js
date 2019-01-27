@@ -23,7 +23,7 @@ castle.init = (self) => {
 
 // TODO: degenerate cases where u should insta attack enemy castle
 castle.turn = (self) => {
-	self.log("Castle health: " + self.me.health + " on turn " + self.me.turn + " with time " + self.me.time);
+	// self.log("Castle health: " + self.me.health + " on turn " + self.me.turn + " with time " + self.me.time);
 	// self.log(self.visible_close_to_far[0]);
 
 	self.availableDirections = util.find_open_adjacents(self);
@@ -40,7 +40,6 @@ castle.turn = (self) => {
 	if ((self.nearest_enemies.length > 0) && (self.turtle_constructed === false) && (Math.random() < 0.99)) {
 		new_state = DEFENDING;
 	}
-
 	self.state = new_state;
 
 	self.log(self.state)

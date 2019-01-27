@@ -27,8 +27,10 @@ util.can_attack = (robot, dx, dy) => {
 };
 
 util.can_buildUnit = (robot, unit, dx, dy) => {
-	let min_karb = Math.min(robot.me.turn, 50);
-	let min_fuel = Math.min(robot.me.turn * 4, 200);
+	// let min_karb = Math.min(robot.me.turn, 50);
+	// let min_fuel = Math.min(robot.me.turn * 4, 200);
+	let min_karb = 50;
+	let min_fuel = 200;
 	return (util.is_open(robot, robot.me.x+dx, robot.me.y+dy) &&
 		robot.karbonite > SPECS.UNITS[unit].CONSTRUCTION_KARBONITE + min_karb&&
 		robot.fuel > SPECS.UNITS[unit].CONSTRUCTION_FUEL + min_fuel&&
@@ -120,7 +122,7 @@ util.squared_distance = (a, b) => {
 
 util.between = (min, max, num) => {
 	return ((num <= max) && (num >= min));
-}
+};
 
 util.close_to_far = (mindist, maxdist) => {
 	let max1d = Math.ceil(Math.sqrt(maxdist));
@@ -140,7 +142,7 @@ util.close_to_far = (mindist, maxdist) => {
 		}
 	}
 	return retval;
-}
+};
 
 util.nearest_enemies = (robot, close_to_far) => {
 	let map = robot.getVisibleRobotMap();
@@ -153,7 +155,7 @@ util.nearest_enemies = (robot, close_to_far) => {
 		}
 	}
 	return retval;
-}
+};
 
 util.rand_int = (n) => {
 	return Math.floor(n * Math.random());
@@ -170,6 +172,7 @@ util.rand_weight = (a) => {
 		tot += a[i];
 		if (tot > rand_cap){return i;}
 	}
+	throw 'rand_weight wut';
 };
 
 export default util

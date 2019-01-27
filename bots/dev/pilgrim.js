@@ -16,6 +16,7 @@ const PATHING_TO_MAKE_CHURCH = 2;
 const PATHING_BACK = 3;
 const PATHING_TO_CHURCH = 4;
 const MINING = 5;
+const PATHING_TO_RESET = 6;
 
 class PriorityQueue{
     /** A min heap by its element's val property
@@ -318,8 +319,48 @@ pilgrim.init = (self) => {
         d = new Date();
         self.log(d.getTime() - tic);
     }
-
+    self.made_voronoi_dist = false;
 };
+function turn_reset(self){
+    self.log('resettting')
+    if (self.tree_data.voronoi_id[self.me.y][self.me.x] === 0){
+        self.current_node = 0;
+        self.state = PATHING_TO_NODE;
+        return turn_path_to_node(self);
+    }
+    if (!self.made_voronoi_dist){
+        let path_q = [];
+        for (let y = 0; y < self.map_s_y; y++){
+            for (let x = 0; x < self.map_s_x; x++){
+                if (self.tree_data.voronoi_id[y][x] === 0){
+                    path_q.push({x: x, y: y});
+                }
+            }
+        }
+        self.voronoi_dist = util.bfs(self, path_q);
+    }
+    // this.log('a');
+    let curr_dist = self.voronoi_dist[self.me.y][self.me.x];
+    for (let i = 0; i < self.diff_list.length; i++) {
+        let p = {x: self.me.x + self.diff_list[i].x, y: self.me.y + self.diff_list[i].y, i: self.current_node};
+        if (util.on_map(self, p) && self.voronoi_dist[p.y][p.x] === curr_dist - 1 && self.diff_vis[i] <= 0) {
+            return self.move(self.diff_list[i].x, self.diff_list[i].y);
+        }
+    }
+    let valid_dirs = [];
+    for (let i = 0; i < self.diff_list.length; i++) {
+        let p = {x: self.me.x + self.diff_list[i].x, y: self.me.y + self.diff_list[i].y, i: self.current_node};
+        if (util.on_map(self, p) && self.voronoi_dist[p.y][p.x] === curr_dist && self.diff_vis[i] <= 0) {
+            valid_dirs.push(self.diff_list[i]);
+        }
+    }
+    if (valid_dirs.length === 0){
+        self.log('path_reset blocked');
+        return;
+    }
+    let i = util.rand_int(valid_dirs.length);
+    return self.move(valid_dirs[i].x, valid_dirs[i].y);
+}
 function get_tree_dist(self, p){
     /* Gets the distance associated with the location p.x, p.y to the node p.i*/
     let id = self.tree_data.voronoi_id[p.y][p.x];
@@ -339,23 +380,25 @@ function get_tree_dist(self, p){
 function turn_path_to_node(self) {
     if (self.current_node < 0) {
         self.log('end of line');
-        if (Math.random() < 0.1){
-            let valid_dirs = [];
-            for (let i = 0; i < self.diff_list.length; i++) {
-                let p = util.add_pos(self.me, self.diff_list[i]);
-                if (util.on_map(self, p) && self.map[p.y][p.x] && self.diff_vis[i] <= 0) {
-                    valid_dirs.push(self.diff_list[i]);
-                }
-            }
-            // return;
-            if (valid_dirs.length === 0){
-                return;
-            }
-            // return;
-            let i = util.rand_int(valid_dirs.length);
-            return self.move(valid_dirs[i].x, valid_dirs[i].y);
-        }
-        return; // ditto as above
+        self.state = PATHING_TO_RESET;
+        return turn_reset(self);
+        // if (Math.random() < 0.1){
+        //     let valid_dirs = [];
+        //     for (let i = 0; i < self.diff_list.length; i++) {
+        //         let p = util.add_pos(self.me, self.diff_list[i]);
+        //         if (util.on_map(self, p) && self.map[p.y][p.x] && self.diff_vis[i] <= 0) {
+        //             valid_dirs.push(self.diff_list[i]);
+        //         }
+        //     }
+        //     // return;
+        //     if (valid_dirs.length === 0){
+        //         return;
+        //     }
+        //     // return;
+        //     let i = util.rand_int(valid_dirs.length);
+        //     return self.move(valid_dirs[i].x, valid_dirs[i].y);
+        // }
+        // return; // ditto as above
     }
     // this.log('turn_path_to_node');
     // for (let i = 1; i < this.tree_data.tree_info.length; i++){
@@ -373,8 +416,9 @@ function turn_path_to_node(self) {
     let tree_info = self.tree_data.tree_info;
     // this.log(tree_info);
     let target = tree_info[self.current_node];
+    // self.log(target);
     // let vis_map = self.getVisibleRobotMap();
-    let visible_robots = self.getVisibleRobots();
+    let visible_robots = self.vis_bots;
     // let vis_map = this.get
     let target_occupied = false;
     for (let i = 0; i < visible_robots.length; i++) {
@@ -388,7 +432,7 @@ function turn_path_to_node(self) {
     // if (target_occupied){
     //     this.log('target occupied');
     // }
-    if ((self.current_node === 0 && !(self.gather_karb?self.karbonite_map: self.fuel_map)[target.y][target.x]) ||
+    if ((self.current_node === 0 && !(self.karbonite_map[target.y][target.x] || self.fuel_map[target.y][target.x])) ||
         (self.tree_data.voronoi_id[self.me.y][self.me.x] === self.current_node && target_occupied)) {
         let weights = [];
         let children = tree_info[self.current_node].children;
@@ -402,7 +446,9 @@ function turn_path_to_node(self) {
         }
         let child = -1;
         if (children.length > 0){
-            child = children[util.rand_weight(weights)];
+            let i = util.rand_weight(weights);
+            // self.log(i);
+            child = children[i];
         }
         // let rand = Math.random() * (tree_info[self.current_node].node_weight - 1);
         // let child = -1; // TODO: make leaf node contingency
@@ -428,6 +474,7 @@ function turn_path_to_node(self) {
 
     }
 
+    // self.log(self.current_node);
     let curr_dist = get_tree_dist(self, {x: self.me.x, y: self.me.y, i: self.current_node});
     if (curr_dist === 0){
         self.log('arrived');
@@ -445,7 +492,8 @@ function turn_path_to_node(self) {
     }
     for (let i = 0; i < self.diff_list.length; i++) {
         let p = {x: self.me.x + self.diff_list[i].x, y: self.me.y + self.diff_list[i].y, i: self.current_node};
-        if (util.on_map(self, p) && get_tree_dist(self, p) === curr_dist - 1 && diff_vis[i] <= 0) {
+        if (util.on_map(self, p) && self.map[p.y][p.x] &&
+            get_tree_dist(self, p) === curr_dist - 1 && diff_vis[i] <= 0) {
             return self.move(self.diff_list[i].x, self.diff_list[i].y);
         }
     }
@@ -456,7 +504,7 @@ function turn_path_to_node(self) {
     let valid_dirs = [];
     for (let i = 0; i < self.diff_list.length; i++) {
         let p = {x: self.me.x + self.diff_list[i].x, y: self.me.y + self.diff_list[i].y, i: self.current_node};
-        if (util.on_map(self, p) && get_tree_dist(self, p) === curr_dist && diff_vis[i] <= 0) {
+        if (util.on_map(self, p) && self.map[p.y][p.x] && get_tree_dist(self, p) === curr_dist && diff_vis[i] <= 0) {
             valid_dirs.push(self.diff_list[i]);
         }
     }
@@ -719,13 +767,14 @@ function turn_path_to_church(self){
     if (curr_dist === 0){
 
         self.log('arrived at deposit point');
-        self.log(target_loc);
-        self.log(self.me.karbonite + " " + self.me.fuel);
-        self.log(self.me);
+        // self.log(target_loc);
+        // self.log(self.me.karbonite + " " + self.me.fuel);
+        // self.log(self.me);
         self.state = PATHING_BACK;
         return self.give(target_loc.x - self.me.x, target_loc.y - self.me.y, self.me.karbonite, self.me.fuel);
     }
-    if ((self.gather_karb && self.karbonite > 50 && self.fuel < 200) || (!self.gather_karb && 4 * curr_dist > self.me.fuel)){
+    if ((self.me.fuel < 100 && self.karbonite > 50 && self.fuel < 200) ||
+        (self.me.karbonite < 20 && 4 * curr_dist > self.me.fuel)){
         self.state = PATHING_BACK;
     }
     for (let i = 0; i < self.diff_list.length; i++) {
@@ -779,6 +828,8 @@ pilgrim.turn = (self) => {
         case PATHING_TO_CHURCH:
             // this.log('pathing to church');
             return turn_path_to_church(self);
+        case PATHING_TO_RESET:
+            return turn_reset(self);
 
     }
     self.log('halp!');
