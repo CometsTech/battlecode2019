@@ -34,6 +34,10 @@ castle.init = (self) => {
 	self.log(self.target_counts);
 
 	self.turtle_radius = 4;
+	self.bank_karb = 40;
+	self.bank_fuel = 160;
+	self.last_fuel = 0;
+	self.last_karb = 0;
 };
 
 // TODO: degenerate cases where u should insta attack enemy castle
@@ -41,12 +45,14 @@ castle.turn = (self) => {
 	if (castle_verbosity > 0) {
 		self.log("Castle health: " + self.me.health + " on turn " + self.me.turn + " with time " + self.me.time);
 	}
-	if (self.last_fuel < self.fuel){
-		self.bank_fuel += 0.1 * (self.fuel - self.last_fuel);
-	}
-	if (self.last_karb < self.karbonite){
-		self.bank_karb += 0.1 * (self.karbonite - self.last_karb);
-	}
+	// if (self.last_fuel < self.fuel){
+	// 	self.bank_fuel += 0.1 * (self.fuel - self.last_fuel);
+	// }
+	// if (self.last_karb < self.karbonite){
+	// 	self.bank_karb += 0.1 * (self.karbonite - self.last_karb);
+	// }
+	self.bank_karb += 1;
+	self.bank_fuel += 5;
 	self.last_fuel = self.fuel;
 	self.last_karb = self.karbonite;
 	// self.log(self.visible_close_to_far[0]);
@@ -94,11 +100,11 @@ castle.turn = (self) => {
 		new_state = BUILDING_PILGRIMS;
 	}
 
-	if (Math.random() < 10 / Math.min(25, self.turn)){
-		new_state = HARASSING;
-	}
+	// if (Math.random() < 10 / Math.min(25, self.turn)){
+	// 	new_state = HARASSING;
+	// }
 
-	if (self.initial_turtle_constructed === false && (Math.random() < 0.75)) {
+	if (self.turn > 20 && self.turtle_constructed === false && (Math.random() < 0.5)) {
 		new_state = TURTLING;
 	}
 
