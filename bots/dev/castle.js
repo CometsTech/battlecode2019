@@ -30,7 +30,7 @@ castle.turn = (self) => {
 	// self.log(self.visible_close_to_far[0]);
 
 	self.availableDirections = util.find_open_adjacents(self);
-	self.friendlies = []
+	self.friendlies = [];
 	self.nearest_enemies = util.nearest_enemies(self, self.attack_close_to_far);
 	self.log(self.nearest_enemies);
 
@@ -55,7 +55,7 @@ castle.turn = (self) => {
 	if (self.unit_counts[SPECS.PILGRIM] < self.target_counts[SPECS.PILGRIM]) {
 		new_state = BUILDING_PILGRIMS;
 	}
-	
+
 	// Note the 0.99 heuristic is to permit not *always* defending... perhaps use another metric
 	if ((self.nearest_enemies.length > 0) && (self.turtle_constructed === false) && (Math.random() < 0.99)) {
 		new_state = DEFENDING;
