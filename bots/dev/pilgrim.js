@@ -270,11 +270,15 @@ pilgrim.init = (self) => {
         tic = d.getTime();
     }
     /** BFS distances*/
+    let loc_list = [self.me];
     let fuel_locs = [];
     for (let j = 0; j < self.map_s_y; j++){
         for (let i = 0; i < self.map_s_x; i++){
             if (self.fuel_map[j][i]){
                 fuel_locs.push({x:i, y:j});
+                if (i !== self.me.x || j !== self.me.y){
+                    loc_list.push({x:i, y:j});
+                }
             }
         }
     }
@@ -284,6 +288,9 @@ pilgrim.init = (self) => {
         for (let i = 0; i < self.map_s_x; i++){
             if (self.karbonite_map[j][i]){
                 karb_locs.push({x:i, y:j});
+                if (i !== self.me.x || j !== self.me.y){
+                    loc_list.push({x:i, y:j});
+                }
             }
         }
 
@@ -306,7 +313,7 @@ pilgrim.init = (self) => {
     //     self.gather_karb = Math.random() * (fuel_weight + karb_weight) < fuel_weight;
     // }
     // return;
-    self.tree_data = pilgrim_make_tree(self, [self.me].concat(karb_locs, fuel_locs));
+    self.tree_data = pilgrim_make_tree(self, loc_list);
     for (let i = 0; i < self.tree_data.tree_info.length; i++){
         let pos = self.tree_data.tree_info[i];
         self.tree_data.tree_info[i].is_karb = self.karbonite_map[pos.y][pos.x];
@@ -341,13 +348,18 @@ function turn_reset(self){
     }
     // this.log('a');
     let curr_dist = self.voronoi_dist[self.me.y][self.me.x];
+    let valid_dirs = [];
     for (let i = 0; i < self.diff_list.length; i++) {
         let p = {x: self.me.x + self.diff_list[i].x, y: self.me.y + self.diff_list[i].y, i: self.current_node};
         if (util.on_map(self, p) && self.voronoi_dist[p.y][p.x] === curr_dist - 1 && self.diff_vis[i] <= 0) {
-            return self.move(self.diff_list[i].x, self.diff_list[i].y);
+            valid_dirs.push(self.diff_list[i]);
         }
     }
-    let valid_dirs = [];
+    if (valid_dirs.length > 0){
+        let dir = valid_dirs[util.rand_int(valid_dirs.length)];
+        return self.move(dir.x, dir.y);
+    }
+    valid_dirs = [];
     for (let i = 0; i < self.diff_list.length; i++) {
         let p = {x: self.me.x + self.diff_list[i].x, y: self.me.y + self.diff_list[i].y, i: self.current_node};
         if (util.on_map(self, p) && self.voronoi_dist[p.y][p.x] === curr_dist && self.diff_vis[i] <= 0) {
@@ -490,18 +502,23 @@ function turn_path_to_node(self) {
             diff_vis[self.inv_diff_list[rob.y - self.me.y + 2][rob.x - self.me.x + 2]] = rob.id;
         }
     }
+    let valid_dirs = [];
     for (let i = 0; i < self.diff_list.length; i++) {
         let p = {x: self.me.x + self.diff_list[i].x, y: self.me.y + self.diff_list[i].y, i: self.current_node};
         if (util.on_map(self, p) && self.map[p.y][p.x] &&
             get_tree_dist(self, p) === curr_dist - 1 && diff_vis[i] <= 0) {
-            return self.move(self.diff_list[i].x, self.diff_list[i].y);
+            valid_dirs.push(self.diff_list[i]);
         }
+    }
+    if (valid_dirs.length > 0){
+        let dir = valid_dirs[util.rand_int(valid_dirs.length)];
+        return self.move(dir.x, dir.y);
     }
     // return;
     if (Math.random() < 0.8){
         return;
     }
-    let valid_dirs = [];
+    valid_dirs = [];
     for (let i = 0; i < self.diff_list.length; i++) {
         let p = {x: self.me.x + self.diff_list[i].x, y: self.me.y + self.diff_list[i].y, i: self.current_node};
         if (util.on_map(self, p) && self.map[p.y][p.x] && get_tree_dist(self, p) === curr_dist && diff_vis[i] <= 0) {

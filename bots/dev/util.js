@@ -158,6 +158,9 @@ util.nearest_enemies = (robot, close_to_far) => {
 };
 
 util.rand_int = (n) => {
+	if (n === 0){
+		throw "rand_int n should be greater than 0";
+	}
 	return Math.floor(n * Math.random());
 };
 
