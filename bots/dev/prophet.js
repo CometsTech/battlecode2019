@@ -5,6 +5,10 @@ var prophet = {};
 
 const max_dist = 100000;
 
+const TURTLING = 0;
+const ATTACKING = 1;
+const CHARGING = 2;
+
 prophet.init = (self) => {
 	let diff_list = [];
 	let rev_diff_list = [];
@@ -66,9 +70,43 @@ prophet.init = (self) => {
 		map_weights[pos.y][pos.x] = 0;
 	}
 	self.dir_weights = o_dir_cnts;
+
+
+
+	// TOOD ELAINE WRITE INITIALIZE CODE HERE
+	self.state = TURTLING;
+	// You probably want to  initialize a list of locations describing the turtle formation relative to the castle's position
+	// Then, every turn, you can get the location of the castle, and pick locations accordingly
+	// Alternatively just like always have profits move outwards, but  not go more than 2 diagonally further from an existing  prophet
+	// Also ensure that they  are checkerboard  with their nearest prophets... then u should get some emergent turtling behavior
 };
 
 prophet.turn = (self) => {
+	var new_state = TURTLING
+
+	// add code to adjust state... 
+
+	self.state = new_state;
+
+
+	switch (self.state) {
+		case TURTLING:
+			return turn_turtle(self);
+			break;
+		case ATTACKING:
+			return turn_not_turtling(self);
+			break;
+		case CHARGING:
+			return turn_not_turtling(self);
+			break;
+	}
+};
+function turn_turtle(self) {
+	// TODO Elaine add code here
+	return; // Return an  action, prolly  gonna be movement
+}
+
+function turn_not_turtling(self) {
 	//First check for visible enemies
 	var visibleRobots = self.getVisibleRobots();
 	for(var robot of visibleRobots){
@@ -105,6 +143,6 @@ prophet.turn = (self) => {
 		}
 	}
 	return self.move(self.diff_list[dir_i].x, self.diff_list[dir_i].y);
-};
+}
 
 export default prophet;
