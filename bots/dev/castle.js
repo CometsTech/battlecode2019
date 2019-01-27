@@ -56,7 +56,7 @@ castle.turn = (self) => {
 	// Set castle state:
 	var new_state = ATTACKING; // default
 
-	if (self.unit_counts[SPECS.PILGRIM] < self.target_counts[SPECS.PILGRIM]) {
+	if (self.unit_counts[SPECS.PILGRIM] < self.target_counts[SPECS.PILGRIM] && Math.random() < 0.66) {
 		new_state = BUILDING_PILGRIMS;
 	}
 

@@ -73,22 +73,16 @@ function init_resourceror(self){
 	let loc_list = [self.me];
 	for (let j = 0; j < self.map_s_y; j++){
 		for (let i = 0; i < self.map_s_x; i++){
-			if (self.fuel_map[j][i]){
-				fuel_locs.push({x:i, y:j});
-				if (i !== self.me.x || j !== self.me.y){
-					loc_list.push({x:i, y:j});
-				}
+			if (self.fuel_map[j][i] && (i !== self.me.x || j !== self.me.y)) {
+				loc_list.push({x: i, y: j});
 			}
 		}
 	}
 	// self.path_fuel = util.bfs(self, fuel_locs);
 	for (let j = 0; j < self.map_s_y; j++){
 		for (let i = 0; i < self.map_s_x; i++){
-			if (self.karbonite_map[j][i]){
-				karb_locs.push({x:i, y:j});
-				if (i !== self.me.x || j !== self.me.y){
-					loc_list.push({x:i, y:j});
-				}
+			if (self.karbonite_map[j][i] && (i !== self.me.x || j !== self.me.y)) {
+				loc_list.push({x: i, y: j});
 			}
 		}
 
@@ -99,13 +93,13 @@ function init_resourceror(self){
 crusader.init = (self) => {
 	/** This generates the list of the possible moves that the crusader can make.
 	 * rev_diff_list is the list that is the same as diff_list, but the direction is reversed. */
-	let inv_diff_list = util.make_array(-1, [5, 5]);
+	let inv_diff_list = util.make_array(-1, [7, 7]);
 	let diff_list = [];
 	let rev_diff_list = [];
-	for (let j = -2; j < 3; j++){
-		for (let i = -2; i < 3; i++){
-			if ((i * i + j * j <= 4) && (i !== 0 || j !== 0)){
-				inv_diff_list[j + 2][i + 2] = diff_list.length;
+	for (let j = -3; j < 4; j++){
+		for (let i = -3; i < 4; i++){
+			if ((i * i + j * j <= 9) && (i !== 0 || j !== 0)){
+				inv_diff_list[j + 3][i + 3] = diff_list.length;
 				diff_list.push({x:i, y:j});
 				rev_diff_list.push({x:-i, y:-j});
 			}
@@ -117,43 +111,124 @@ crusader.init = (self) => {
 
 	self.is_re_init = false;
 
-	return init_roamer(self);
+	self.is_roamer = false;
+	if (Math.random() < 0.5){
+		self.is_roamer = true;
+		return init_roamer(self);
+	}
+
+	return init_resourceror(self);
 };
 
 function turn_roamer(self){
 	//If nothing then move according to plan
 	let dir_weights = self.dir_weights[self.me.y][self.me.x];
-	let rand = Math.random();
-	let tot = 0;
-	for (let i = 0; i < dir_weights.length; i++){
-		tot += dir_weights[i];
+	let valid_dirs = [];
+	let valid_weights = [];
+	for (let i = 0; i < self.diff_list.length; i++){
+		let p = util.add_pos(self.me, self.diff_list[i]);
+		if (util.on_map(self, p) && self.map[p.y][p.x] && dir_weights[i] > 0 && self.diff_vis[i] <= 0){
+			valid_dirs.push(self.diff_list[i]);
+			valid_weights.push(dir_weights[i])
+		}
 	}
-	if (tot === 0){
+	if (valid_dirs.length === 0){
 		init_roamer(self);
 		return turn_roamer(self);
 	}
-	rand *= tot;
-	let acc = 0;
-	let dir_i = 0;
-	for (let i = 0; i < dir_weights.length; i++){
-		acc += dir_weights[i];
-		if (acc > rand){
-			dir_i = i;
-			break;
-		}
-	}
-	return self.move(self.diff_list[dir_i].x, self.diff_list[dir_i].y);
+	let i = util.rand_weight(valid_weights);
+	return self.move(valid_dirs[i].x, valid_dirs[i].y);
 }
 function turn_resourceror(self){
-	return; //TODO
+	if (self.current_node < 0) {
+		self.log('end of line');
+		init_resourceror(self);
+	}
+	let tree_info = self.tree_data.tree_info;
+	let target = tree_info[self.current_node];
+	let visible_robots = self.vis_bots;
+	let temp_p = {x: self.me.x, y: self.me.y, i: self.current_node};
+	if (util.get_tree_dist(self, temp_p) === max_dist){
+		self.current_node = self.tree_data.voronoi_id[self.me.y][self.me.x];
+		target = tree_info[self.current_node];
+	}
+	if (self.current_node === 0||
+		(self.tree_data.voronoi_id[self.me.y][self.me.x] === self.current_node &&
+			util.squared_distance(self.me, target) <= 16)) {
+		let weights = [];
+		let children = tree_info[self.current_node].children;
+		for (let i = 0; i < children.length; i++){
+			weights.push(tree_info[children[i]].node_weight);
+		}
+		let child = -1;
+		if (children.length > 0){
+			let i = util.rand_weight(weights);
+			child = children[i];
+		}
+
+		self.current_node = child;
+		if (child === -1){
+			self.log('end of line');
+			return turn_resourceror(self);
+		}
+		target = tree_info[self.current_node];
+
+	}
+	let curr_dist = util.get_tree_dist(self, {x: self.me.x, y: self.me.y, i: self.current_node});
+	// if (curr_dist === 0){ shouldn't ever happen
+	// 	self.log('arrived');
+	// 	self.log([self.me.x, self.me.y]);
+	// 	self.state = JUST_REACHED_NODE;
+	// 	return turn_on_reaching_node(self);
+	// }
+	// this.log(curr_dist);
+	let diff_vis = util.make_array(-1, [self.diff_list.length]);
+	for (let i = 0; i < visible_robots.length; i++) {
+		let rob = visible_robots[i];
+		if (util.squared_distance(rob, self.me) <= 4 && rob.id !== self.me.id) {
+			diff_vis[self.inv_diff_list[rob.y - self.me.y + 3][rob.x - self.me.x + 3]] = rob.id;
+		}
+	}
+	let valid_dirs = [];
+	for (let i = 0; i < self.diff_list.length; i++) {
+		let p = {x: self.me.x + self.diff_list[i].x, y: self.me.y + self.diff_list[i].y, i: self.current_node};
+		if (util.on_map(self, p) && self.map[p.y][p.x] &&
+			util.get_tree_dist(self, p) === curr_dist - 1 && diff_vis[i] <= 0) {
+			valid_dirs.push(self.diff_list[i]);
+		}
+	}
+	if (valid_dirs.length > 0){
+		let dir = valid_dirs[util.rand_int(valid_dirs.length)];
+		return self.move(dir.x, dir.y);
+	}
+	// return;
+	if (Math.random() < 0.8){
+		return;
+	}
+	valid_dirs = [];
+	for (let i = 0; i < self.diff_list.length; i++) {
+		let p = {x: self.me.x + self.diff_list[i].x, y: self.me.y + self.diff_list[i].y, i: self.current_node};
+		if (util.on_map(self, p) && self.map[p.y][p.x] && util.get_tree_dist(self, p) === curr_dist && diff_vis[i] <= 0) {
+			valid_dirs.push(self.diff_list[i]);
+		}
+	}
+	// return;
+	if (valid_dirs.length === 0){
+		self.log('path_to_node blocked');
+		return;
+	}
+	// return;
+	let i = util.rand_int(valid_dirs.length);
+	return self.move(valid_dirs[i].x, valid_dirs[i].y);
+	// this.log("Help! I'm lost!"); // TODO: make lost contingincy
 }
 crusader.turn = (self) => {
 	self.vis_bots = self.getVisibleRobots();
 	let diff_vis = util.make_array(-1, [self.diff_list.length]);
 	for (let i = 0; i < self.vis_bots.length; i++) {
 		let rob = self.vis_bots[i];
-		if (util.squared_distance(rob, self.me) <= 4 && rob.id !== self.me.id) {
-			diff_vis[self.inv_diff_list[rob.y - self.me.y + 2][rob.x - self.me.x + 2]] = rob.id;
+		if (util.squared_distance(rob, self.me) <= 9 && rob.id !== self.me.id) {
+			diff_vis[self.inv_diff_list[rob.y - self.me.y + 3][rob.x - self.me.x + 3]] = rob.id;
 		}
 	}
 	self.diff_vis = diff_vis;
@@ -165,15 +240,14 @@ crusader.turn = (self) => {
 		let robot = visibleRobots[i];
 		if (robot.team !== self.me.team){
 			self.log('Crusader found enemy');
-			let dx = robot.x - self.me.x, dy = robot.y - self.me.y
+			let dx = robot.x - self.me.x, dy = robot.y - self.me.y;
 			if(util.can_attack(self, dx, dy)){
 				self.log("Crusader attacking");
 				return self.attack(dx, dy);
 			}
 		}
 	}
-
-	return turn_roamer(self);
+	return self.is_roamer? turn_roamer(self): turn_resourceror(self);
 };
 
 export default crusader;
