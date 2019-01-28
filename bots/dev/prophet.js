@@ -155,9 +155,12 @@ function turn_turtle(self) {
 
 	let myd = dist_from_creator(self, self.me);
 	let dir_from_creator = [self.creator.x-self.me.x, self.creator.y-self.me.y];
-	self.log("Distance from creator: " + dir_from_creator);
 	let mod = ((dir_from_creator[0]+dir_from_creator[1]) % 2);
-	self.log(mod);
+	if (mod !== 0 && mod !== 1 & mod !== -1) {
+		self.log("TAKE A LOOK AT THIS BAD MOD:");
+		self.log("Distance from creator: " + dir_from_creator);
+		self.log(mod);
+	}
 	let move_outwards = (myd === 1);
 
 	if (mod !== 0) {

@@ -265,17 +265,19 @@ function turn_turtle(self) {
 					self.log("I lost my partner now i'm sad.");
 					self.partner = undefined;
 				}
-				if (self.isRadioing(partner_bot)) {
-					if (partner_bot.signal === self.me.id) {
-						self.partner.confirmed = true;
-						self.log("My partner picked me!")
-						self.signal(self.me.id, Math.pow(util.radius(partner_bot.x-self.me.x, partner_bot.y-self.me.y), 2));
-						return;
-					}
-					else {
-						self.log("My partner picked someone else :(").
-						self.partner === undefined;
-						move_prob = 1;
+				else {
+					if (self.isRadioing(partner_bot)) {
+						if (partner_bot.signal === self.me.id) {
+							self.partner.confirmed = true;
+							self.log("My partner picked me!")
+							self.signal(self.me.id, Math.pow(util.radius(partner_bot.x-self.me.x, partner_bot.y-self.me.y), 2));
+							return;
+						}
+						else {
+							self.log("My partner picked someone else :(").
+							self.partner === undefined;
+							move_prob = 1;
+						}
 					}
 				}
 			}
