@@ -97,7 +97,6 @@ prophet.init = (self) => {
 
 	self.visible_close_to_far = util.close_to_far(1, SPECS.UNITS[SPECS.PROPHET].VISION_RADIUS);
 	self.attack_close_to_far = util.close_to_far(SPECS.UNITS[SPECS.PROPHET].ATTACK_RADIUS[0], SPECS.UNITS[SPECS.PROPHET].ATTACK_RADIUS[1]);
-	self.log(self.attack_close_to_far);
 };
 
 prophet.turn = (self) => {
@@ -125,6 +124,7 @@ prophet.turn = (self) => {
 	// TODO if creator died all prophets in turtle should change to charging mode
 
 	self.state = new_state;
+	self.log("Prophet state: "+self.state);
 
 
 	switch (self.state) {
@@ -183,13 +183,27 @@ function turn_turtle(self) {
 		return;
 	}
 
-	self.friendlies.forEach((friend) => {
-		let friend_dir = [self.creator.x-friend.x, self.creator.y-friend.y];
-		if (dotproduct(friend_dir, dir_from_creator) > 0 && util.between(1,2,myd - dist_from_creator(self, friend))) {
-			move_outwards = true;
+	self.friendlies.forEach((friend_info) => {
+		let friend = friend_info.robot;
+		if (friend.unit === SPECS.PROPHET)  {
+			let friend_dir = [self.creator.x-friend.x, self.creator.y-friend.y];
+			if (myd - dist_from_creator(self, friend) > 0) {
+				self.log("Found a friend that is closer to castle than I am");
+				self.log("Friend distance from castle: " + dist_from_creator(self, friend));
+				self.log("my  dir" + dir_from_creator);
+				self.log("Friend dir " + friend_dir);
+				self.log("Dot product of locations " + dotproduct(friend_dir, dir_from_creator));
+			}
+			if (dotproduct(friend_dir, dir_from_creator) > 0 && util.between(1,2,myd - dist_from_creator(self, friend))) {
+				move_outwards = true;
+			}
 		}
 	});
-	move_outwards &= (myd < self.turtle_radius);
+	self.log("Should i move outwards? "+move_outwards);
+	move_outwards = move_outwards && (myd <= self.turtle_radius);
+	if (move_outwards === false) {
+		self.log("My distance from creator: " + myd + " max radius: " + self.turtle_radius);
+	}
 
 	if (move_outwards) {
 		let possible_dirs = []

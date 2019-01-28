@@ -24,7 +24,7 @@ castle.init = (self) => {
 	self.initial_turtle_constructed = false;
 	self.unit_counts = [0, 0, 0, 0, 0, 0];
 	self.min_counts = [-1, -1, -1, -1, -1, -1];
-	self.target_counts = [-1, -1, -1, -1, -1, -1]; // ADJUST these
+	self.target_counts = [-1, -1, -1, -1, 10, -1]; // ADJUST these
 	// TODO: tune hyperparameter of 0.6
 	self.target_counts[SPECS.PILGRIM] = Math.ceil( 0.6*  ([].concat.apply([], self.karbonite_map).reduce((total, present) => present ? total + 1 : total)
 														+ [].concat.apply([], self.fuel_map).reduce((total, present) => present ? total + 1 : total)) );
@@ -156,7 +156,7 @@ function turn_build_pilgrims(self){
 function turn_turtle(self, force=false){
 	let unit_to_build = SPECS.PROPHET;
 	let dirs = DIAGONALS;
-	if (Math.random() < 0.2 && (force === false)) {
+	if (self.unit_counts[SPECS.PROPHET] > self.target_counts[SPECS.PROPHET] && Math.random() < 0.2 && (force === false)) {
 		unit_to_build = SPECS.PREACHER;
 		dirs = ADJACENTS;
 	}

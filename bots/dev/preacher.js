@@ -172,9 +172,11 @@ function turn_attack(self) {
 function turn_turtle(self) {
 	let myd = dist_from_creator(self, self.me);
 	let dir_from_creator = [self.creator.x-self.me.x, self.creator.y-self.me.y];
-	self.log("Distance from creator: " + dir_from_creator);
 	let mod = ((dir_from_creator[0]+dir_from_creator[1]) % 2);
-	self.log(mod);
+	if (mod !== 0 && mod !== 1 && mod !== -1) {
+		self.log("Distance from creator: " + dir_from_creator);
+		self.log(mod);
+	}
 
 	if (mod === 0) {
 		self.log("NOT ON GRID PROPERLY... Fixing by moving to:");
@@ -230,58 +232,58 @@ function turn_turtle(self) {
 	else {
 		self.at_turtle_edge = true;
 		let move_prob = 0.2;
-		if (self.partner === undefined) {
-			self.friendlies.forEach((robot_info) => {
-				if (robot_info.robot.unit === SPECS.PREACHER) {
-					if (dist_from_creator(self, robot_info.robot) === self.turtle_radius && self.isRadioing(robot_info.robot)) {
-						if (robot_info.robot.signal === self.me.id) {
-							self.partner = {robot_id: robot_info.robot.id, confirmed: true};
-						}
-						self.log("Found a confirmed partner, signalling to him: " + robot_info.robot.id)
-						self.signal(robot_info.robot.id, Math.pow(util.radius(robot_info.dx, robot_info.dy), 2))
-						return;
-					}
-				}
-			});
-			self.friendlies.forEach((robot_info) => {
-				if (robot_info.robot.unit === SPECS.PREACHER) {
-					if (dist_from_creator(self, robot_info.robot) === self.turtle_radius) {
-						self.partner = {robot_id: robot_info.robot.id, confirmed: false};
-						self.log("Found partner, signalling to him: " + robot_info.robot.id)
-						self.signal(robot_info.robot.id, Math.pow(util.radius(robot_info.dx, robot_info.dy), 2))
-						return;
-					}
-				}
-			});
-		}
-		else {
-			if (self.partner.confirmed) {
-				return;
-			}
-			else {
-				let partner_bot = self.getRobot(self.partner.robot_id);
-				self.log("Checking to see if my partner has picked me.");
-				if (partner_bot === null) {
-					self.log("I lost my partner now i'm sad.");
-					self.partner = undefined;
-				}
-				else {
-					if (self.isRadioing(partner_bot)) {
-						if (partner_bot.signal === self.me.id) {
-							self.partner.confirmed = true;
-							self.log("My partner picked me!")
-							self.signal(self.me.id, Math.pow(util.radius(partner_bot.x-self.me.x, partner_bot.y-self.me.y), 2));
-							return;
-						}
-						else {
-							self.log("My partner picked someone else :(").
-							self.partner === undefined;
-							move_prob = 1;
-						}
-					}
-				}
-			}
-		}
+		// if (self.partner === undefined) {
+		// 	self.friendlies.forEach((robot_info) => {
+		// 		if (robot_info.robot.unit === SPECS.PREACHER) {
+		// 			if (dist_from_creator(self, robot_info.robot) === self.turtle_radius && self.isRadioing(robot_info.robot)) {
+		// 				if (robot_info.robot.signal === self.me.id) {
+		// 					self.partner = {robot_id: robot_info.robot.id, confirmed: true};
+		// 				}
+		// 				self.log("Found a confirmed partner, signalling to him: " + robot_info.robot.id)
+		// 				self.signal(robot_info.robot.id, Math.pow(util.radius(robot_info.dx, robot_info.dy), 2))
+		// 				return;
+		// 			}
+		// 		}
+		// 	});
+		// 	self.friendlies.forEach((robot_info) => {
+		// 		if (robot_info.robot.unit === SPECS.PREACHER) {
+		// 			if (dist_from_creator(self, robot_info.robot) === self.turtle_radius) {
+		// 				self.partner = {robot_id: robot_info.robot.id, confirmed: false};
+		// 				self.log("Found partner, signalling to him: " + robot_info.robot.id)
+		// 				self.signal(robot_info.robot.id, Math.pow(util.radius(robot_info.dx, robot_info.dy), 2))
+		// 				return;
+		// 			}
+		// 		}
+		// 	});
+		// }
+		// else {
+		// 	if (self.partner.confirmed) {
+		// 		return;
+		// 	}
+		// 	else {
+		// 		let partner_bot = self.getRobot(self.partner.robot_id);
+		// 		self.log("Checking to see if my partner has picked me.");
+		// 		if (partner_bot === null) {
+		// 			self.log("I lost my partner now i'm sad.");
+		// 			self.partner = undefined;
+		// 		}
+		// 		else {
+		// 			if (self.isRadioing(partner_bot)) {
+		// 				if (partner_bot.signal === self.me.id) {
+		// 					self.partner.confirmed = true;
+		// 					self.log("My partner picked me!")
+		// 					self.signal(self.me.id, Math.pow(util.radius(partner_bot.x-self.me.x, partner_bot.y-self.me.y), 2));
+		// 					return;
+		// 				}
+		// 				else {
+		// 					self.log("My partner picked someone else :(");
+		// 					self.partner === undefined;
+		// 					move_prob = 1;
+		// 				}
+		// 			}
+		// 		}
+		// 	}
+		// }
 		if (self.partner === undefined && Math.random() < move_prob) {
 			let possible_dirs = []
 			for (var d of STRAIGHTS) {
