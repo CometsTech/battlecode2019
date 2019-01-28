@@ -554,4 +554,89 @@ util.get_tree_dist = (self, p) => {
 		return max_dist;
 	}
 };
+
+//A-Star 
+util.hash_coord = (x1, y1) => {
+	return 100*x1 + y1;
+}
+
+util.hash_coords = (x1, y1, x2, y2) => {
+	return 10000*hash_coord(x1, y1) + hash_coord(x2, y2);
+}
+
+function possible_moves(maxrsq){
+	var moves = [];
+	var max = Math.floor(Math.sqrt(maxrsq));
+
+	for(var i = 1; i <= max; i++){
+		moves.push([0, i]);
+		moves.push([0, -i]);
+		moves.push([i, 0]);
+		moves.push([-i, 0]);
+	}
+	
+	for (var i = 1; i <= max; i++){
+		for(var j = i; i*i + j*j <= maxrsq; j++){
+			moves.push([i, j]);
+			moves.push([i, -j]);
+			moves.push([-i, j]);
+			moves.push([-i, -j]);
+			if(i != j){
+				moves.push([j, i]);
+				moves.push([j, -i]);
+				moves.push([-j, i]);
+				moves.push([-j, -i]);
+			}
+		}
+	}
+	return moves;
+}
+
+function astar_heuristic(x1, y1, x2, y2){
+	return (x2-x1)*(x2-x1) + (y2-y1)*(y2-y1);
+}
+
+util.astar = (self, x1, y1, x2, y2, memoPaths, possibleMoves) => {
+	/* (x1, y1) current coordinates
+	 * (x2, y2) destination coordinates
+	 * memoPaths dictionary of previously computed moves
+	 * possibleMoves list of valid moves [dx, dy]
+	*/
+	var hashed = util.hash_coords(x1, y1, x2, y2);
+	if (memoPaths.hasOwnProperty(hashed)) {
+		return memoPaths[hashed].move;
+	}
+
+	var q = new PriorityQueue();
+	var visited = {};
+
+	q.push({loc: [x1, y1], depth: 0, val: astar_heuristic(x1, y1, x2, y2), prev: -1});
+
+	while(q.length() > 0){
+		var node = q.pop();
+		if (util.hash_coord(q.loc[0], q.loc[1]) === util.hash_coord(x2, y2)) {
+			while (node.prev != -1) {
+				memoPaths[util.hash_coord(...node.prev.loc)] = [node.loc[0] - node.prev.loc[0], node.loc[1] - node.prev.loc[1]];
+				node = node.prev;
+			}
+		}
+
+		//for (var l of possible_moves(SPECS.UNIT[self.me.unit].SPEED)){
+		for (var l of possibleMoves){
+			var hash = util.hash_coord(loc);
+			if (visited.hasOwnProperty(hashed)) continue;
+
+			visited[hash] = true;
+
+			var dx = l[0], dy = l[1], newx = self.me.x + dx, newy = self.me.y + dy;
+			if(!util.is_passable(newx, newy)) continue;
+			var newNode = {loc:[newx, newy] , depth: node.depth+1, val: node.val + dx*dx + dy*dy + l[1]*l[1] + astar_heuristic(node.loc[0], node.loc[1], x2, y2), prev: node};
+			q.push(newNode);
+		}
+	}
+
+	self.log("A-STAR FAILED");
+	return -1;
+}
+
 export default util

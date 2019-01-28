@@ -70,6 +70,7 @@ function init_roamer(self){
 	self.dir_weights = o_dir_cnts;
 }
 function init_resourceror(self){
+	self.fin_init = false;
 	let inv_loc_list = util.make_array(-1, [self.map_s_y, self.map_s_x]);
 	let loc_list = [self.me];
 	let fuel_locs = [];
@@ -180,6 +181,7 @@ function init_resourceror(self){
 	self.meta_loc_list = meta_loc_list;
 	self.tree_data = util.pilgrim_make_tree(self, loc_list);
 	self.current_node = 0;
+	self.fin_init = true;
 }
 crusader.init = (self) => {
 	/** This generates the list of the possible moves that the crusader can make.
@@ -234,6 +236,25 @@ function turn_roamer(self){
 	return self.move(valid_dirs[i].x, valid_dirs[i].y);
 }
 function turn_resourceror(self){
+	if (!self.fin_init){
+		if (self.me.time < 200){
+			let valid_dirs = [];
+			for (let i = 0; i < self.diff_list.length; i++) {
+				let p = {x: self.me.x + self.diff_list[i].x, y: self.me.y + self.diff_list[i].y, i: self.current_node};
+				if (util.on_map(self, p) && self.map[p.y][p.x] && diff_vis[i] <= 0) {
+					valid_dirs.push(self.diff_list[i]);
+				}
+			}
+			if (valid_dirs.length === 0){
+				self.log('path random blocked');
+				return;
+			}
+			// return;
+			let i = util.rand_int(valid_dirs.length);
+			return self.move(valid_dirs[i].x, valid_dirs[i].y);
+		}
+		init_resourceror(self);
+	}
 	if (self.current_node < 0) {
 		self.log('end of line');
 		init_resourceror(self);

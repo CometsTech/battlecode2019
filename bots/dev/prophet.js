@@ -303,16 +303,14 @@ function dist_from_creator(self, robot) {
 function turn_not_turtling(self) {
 	//First check for visible enemies
 	var visibleRobots = self.getVisibleRobots();
-	for(var robot of visibleRobots){
-		if(robot.team != self.me.team){
-			self.log("Prophet found enemy");
-			var dx = robot.x - self.me.x, dy = robot.y - self.me.y;
-			if(util.can_attack(self, dx, dy)){
-				self.log("Prophet attacking");
-				return self.attack(dx, dy);
-			}
-			//try to move toward it
+	var visibleEnemies = visibleRobots.filter(robot => robot.team != self.me.team);
+	
+	for(var robot of visibleEnemies){
+		var dx = robot.x - self.me.x, dy = robot.y - self.me.y;
+		if(util.can_attack(self, dx, dy)){
+			return self.attack(dx, dy);
 		}
+			//try to move toward it
 	}
 
 	//If nothing then move according to plan
