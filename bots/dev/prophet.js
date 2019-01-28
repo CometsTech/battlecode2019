@@ -8,7 +8,6 @@ const max_dist = 100000;
 const DIAGONALS = [[1, 1], [1, -1], [-1, 1], [-1, -1]];
 const STRAIGHTS = [[2, 0], [0, 2], [-2, 0], [0, -2]];
 const ADJACENTS = [[1, 0], [0, 1], [-1, 0], [0, -1]];
-const POSSIBLEMOVES = DIAGONALS.concat(STRAIGHTS_).concat(ADJACENTS);
 
 
 const TURTLING = 0;
@@ -287,16 +286,14 @@ function dist_from_creator(self, robot) {
 function turn_not_turtling(self) {
 	//First check for visible enemies
 	var visibleRobots = self.getVisibleRobots();
-	for(var robot of visibleRobots){
-		if(robot.team != self.me.team){
-			self.log("Prophet found enemy");
-			var dx = robot.x - self.me.x, dy = robot.y - self.me.y;
-			if(util.can_attack(self, dx, dy)){
-				self.log("Prophet attacking");
-				return self.attack(dx, dy);
-			}
-			//try to move toward it
+	var visibleEnemies = visibleRobots.filter(robot => robot.team != self.me.team);
+	
+	for(var robot of visibleEnemies){
+		var dx = robot.x - self.me.x, dy = robot.y - self.me.y;
+		if(util.can_attack(self, dx, dy)){
+			return self.attack(dx, dy);
 		}
+			//try to move toward it
 	}
 
 	//If nothing then move according to plan
@@ -321,43 +318,6 @@ function turn_not_turtling(self) {
 		}
 	}
 	return self.move(self.diff_list[dir_i].x, self.diff_list[dir_i].y);
-}
-
-function turn_moving(self){
-	/*MOVING aka PATHING toward enemy base*/
-}
-
-
-function turn_attacking(self){
-	var visibleRobots = self.getVisibleRobots();
-	var visibleEnemies = visibleRobots.filter(robot => robot.team != self.me.team);
-
-	if (visibleEnemies.length === 0) {
-		self.state = MOVING;
-		return;
-	}
-
-	var numEnemyClose = 0, numEnemyRange = 0;
-
-	for(var robot of visibleEnemies){
-		var dx = robot.x - self.me.x, dy = robot.y - self.me.y;
-		if(util.can_attack(self, dx, dy)){
-			self.log("Prophet attacking");
-			return self.attack(dx, dy);
-		}
-
-		if(robot.unit === SPECS.PROPHET){
-			numEnemyRange += 1;
-		}
-		else{
-			numEnemyClose += 1;
-		}
-	}
-	
-	//If unable to attack, then either move closer or farther out of range
-	if(numEnemyRange >= numEnemyClose){
-	
-	}
 }
 
 export default prophet;

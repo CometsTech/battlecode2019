@@ -110,12 +110,6 @@ util.is_open = (robot, x, y) => {
 	return false;
 };
 
-util.is_passable = (x, y) => {
-	if(x < 0 || y < 0 || x >= robot.map.length || y >= robot.map.length) return false;
-	if(robot.map[y][x]) return true;
-	return false;
-}
-
 
 // from charles
 util.make_array_helper = (e, l_s, s, end) => {
