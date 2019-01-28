@@ -238,7 +238,7 @@ function turn_roamer(self){
 function turn_resourceror(self){
 	if (!self.fin_init){
 		if (self.me.time < 200){
-			valid_dirs = [];
+			let valid_dirs = [];
 			for (let i = 0; i < self.diff_list.length; i++) {
 				let p = {x: self.me.x + self.diff_list[i].x, y: self.me.y + self.diff_list[i].y, i: self.current_node};
 				if (util.on_map(self, p) && self.map[p.y][p.x] && diff_vis[i] <= 0) {
