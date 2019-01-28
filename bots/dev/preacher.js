@@ -26,6 +26,7 @@ preacher.init = (self) => {
 			self.creator_id = robot.id;
 			self.creator = robot;
 			self.turtle_radius = (robot.unit === SPECS.CASTLE) ? 4 : 2;
+			self.initial_turtle_radius = (robot.unit === SPECS.CASTLE) ? 4 : 2;
 		}
 	}
 	if (self.creator === undefined) {
@@ -42,6 +43,11 @@ preacher.turn = (self) => {
 	// Preachers first check for any override signal from their creators
 	// Then preachers check for any override signals from their commanders
 	// Otherwise, they assume they're part of a turtle and move accordingly
+
+	self.turtle_radius = Math.floor(Math.sqrt(self.turn)/3);
+	if (self.turtle_radius < self.initial_turtle_radius) {
+		self.turtle_radius = self.initial_turtle_radius;
+	}
 
 	let creator_matters = self.creator_matters;
 	let commander_matters = self.commander_matters;

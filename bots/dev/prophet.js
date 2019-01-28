@@ -88,6 +88,7 @@ prophet.init = (self) => {
 			self.creator_id = robot.id;
 			self.creator = robot;
 			self.turtle_radius = (robot.unit === SPECS.CASTLE) ? 4 : 2;
+			self.initial_turtle_radius = (robot.unit === SPECS.CASTLE) ? 4 : 2;
 		}
 	}
 	if (self.creator_id === undefined) {
@@ -100,7 +101,10 @@ prophet.init = (self) => {
 };
 
 prophet.turn = (self) => {
-
+	self.turtle_radius = Math.floor(Math.sqrt(self.turn)/3);
+	if (self.turtle_radius < self.initial_turtle_radius) {
+		self.turtle_radius = self.initial_turtle_radius;
+	}
 	self.availableDirections = util.find_open_adjacents(self);
 	self.nearest = util.nearest_units(self, self.visible_close_to_far);
 	self.friendlies = self.nearest.friendlies;
@@ -187,20 +191,20 @@ function turn_turtle(self) {
 		let friend = friend_info.robot;
 		if (friend.unit === SPECS.PROPHET)  {
 			let friend_dir = [self.creator.x-friend.x, self.creator.y-friend.y];
-			if (myd - dist_from_creator(self, friend) > 0) {
-				self.log("Found a friend that is closer to castle than I am");
-				self.log("Friend distance from castle: " + dist_from_creator(self, friend));
-				self.log("my  dir" + dir_from_creator);
-				self.log("Friend dir " + friend_dir);
-				self.log("Dot product of locations " + dotproduct(friend_dir, dir_from_creator));
-			}
+			// if (myd - dist_from_creator(self, friend) > 0) {
+			// 	self.log("Found a friend that is closer to castle than I am");
+			// 	self.log("Friend distance from castle: " + dist_from_creator(self, friend));
+			// 	self.log("my  dir" + dir_from_creator);
+			// 	self.log("Friend dir " + friend_dir);
+			// 	self.log("Dot product of locations " + dotproduct(friend_dir, dir_from_creator));
+			// }
 			if (dotproduct(friend_dir, dir_from_creator) > 0 && util.between(1,2,myd - dist_from_creator(self, friend))) {
 				move_outwards = true;
 			}
 		}
 	});
 	self.log("Should i move outwards? "+move_outwards);
-	move_outwards = move_outwards && (myd <= self.turtle_radius);
+	move_outwards = move_outwards && (myd < self.turtle_radius);
 	if (move_outwards === false) {
 		self.log("My distance from creator: " + myd + " max radius: " + self.turtle_radius);
 	}
