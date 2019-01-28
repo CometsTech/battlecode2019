@@ -309,8 +309,8 @@ function turn_path_to_node(self) {
     let node_list = self.meta_loc_list[self.current_node];
     if (curr_dist <= 1){
         self.log('at node');
-        let fuel_weight = 10 / (self.fuel + 500);
-        let karb_weight = 2 / (self.karbonite);
+        let fuel_weight = 10 / (Math.min(100, self.fuel));
+        let karb_weight = 2 / (Math.min(15, self.karbonite - 50));
         let open_res = [];
         let open_weights = [];
 
@@ -608,6 +608,11 @@ function turn_path_back(self){
         self.log('path_back to mining');
         self.state = MINING;
         return turn_mine(self);
+    }
+    if (curr_dist === 1 && Math.random() < 0.2){
+        self.log("resetting the pathing to the node thignies")
+        self.state = PATHING_TO_NODE;
+        return self.path_to_node;
     }
     for (let i = 0; i < self.diff_list.length; i++) {
         let p = {x: self.me.x + self.diff_list[i].x, y: self.me.y + self.diff_list[i].y, i: self.current_node};
