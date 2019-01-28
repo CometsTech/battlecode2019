@@ -12,12 +12,16 @@ const DEFENDING = 2;
 const HARASSING = 3;
 const CHARGING = 4;
 
+const DIAGONALS = [[1, 1], [1, -1], [-1, 1], [-1, -1]];
+const STRAIGHTS = [[2, 0], [0, 2], [-2, 0], [0, -2]];
+const ADJACENTS = [[1, 0], [0, 1], [-1, 0], [0, -1]];
+
 castle.init = (self) => {
 	self.log("Start of game");
 	self.visible_close_to_far = util.close_to_far(1, SPECS.UNITS[SPECS.CASTLE].VISION_RADIUS);
 	self.attack_close_to_far = util.close_to_far(SPECS.UNITS[SPECS.CASTLE].ATTACK_RADIUS[0], SPECS.UNITS[SPECS.CASTLE].ATTACK_RADIUS[1]);
 	self.state = BUILDING_PILGRIMS;
-	self.turtle_constructed = false;
+	self.initial_turtle_constructed = false;
 	self.unit_counts = [0, 0, 0, 0, 0, 0];
 	self.min_counts = [-1, -1, -1, -1, -1, -1];
 	self.target_counts = [-1, -1, -1, -1, -1, -1]; // ADJUST these
@@ -109,7 +113,7 @@ castle.turn = (self) => {
 	}
 
 	// Note the 0.99 heuristic is to permit not *always* defending... perhaps use another metric
-	if ((self.enemies.length > 0) && (self.turtle_constructed === false)) {
+	if ((self.enemies.length > 0) && (self.initial_turtle_constructed === false)) {
 		new_state = DEFENDING;
 	}
 
@@ -151,10 +155,12 @@ function turn_build_pilgrims(self){
 
 function turn_turtle(self, force=false){
 	let unit_to_build = SPECS.PROPHET;
+	let dirs = DIAGONALS;
 	if (Math.random() < 0.2 && (force === false)) {
-		let unit_to_build = SPECS.PREACHER;
+		unit_to_build = SPECS.PREACHER;
+		dirs = ADJACENTS;
 	}
-	let try_build = rand_build(self, unit_to_build, [[-1, -1], [1, -1], [-1, 1], [1, 1]], 0.01);
+	let try_build = rand_build(self, unit_to_build, dirs, 0.01);
     if (try_build === undefined) {
     	if (force) {
     		return;
